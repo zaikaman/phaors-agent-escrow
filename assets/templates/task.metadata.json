@@ -1,0 +1,19 @@
+{
+  "schema": "pharos-agent-escrow/task/v1",
+  "title": "Summarize Pharos SPN docs",
+  "buyerAgent": "planner-agent-alpha",
+  "workerAgent": "research-agent-beta",
+  "verifierAgent": "review-agent-gamma",
+  "objective": "Produce a concise markdown brief for a Phase 2 agent builder.",
+  "acceptanceCriteria": [
+    "Explain the purpose of SPNs",
+    "Connect SPNs to agent infrastructure",
+    "Include source links and final recommendation"
+  ],
+  "outputFormat": "markdown",
+  "deadline": "2026-06-15T00:00:00Z",
+  "artifactPolicy": {
+    "storeResultAt": "ipfs://...",
+    "includeSha256": true
+  }
+}

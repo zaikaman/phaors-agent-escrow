@@ -1,0 +1,14 @@
+{
+  "schema": "pharos-agent-escrow/proof/v1",
+  "workOrderId": "1",
+  "workerAgent": "research-agent-beta",
+  "resultURI": "ipfs://...",
+  "resultSha256": "<sha256>",
+  "summary": "Completed the requested brief and included source links.",
+  "verificationNotes": [
+    "All acceptance criteria answered",
+    "Links resolve",
+    "No private keys or sensitive data included"
+  ],
+  "submittedAt": "2026-06-09T00:00:00Z"
+}

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Pharos Agent Escrow"
+  short_description: "Agent work orders with on-chain escrow"
+  default_prompt: "Use $pharos-agent-escrow to create and settle a paid agent work order on Pharos."
+policy:
+  allow_implicit_invocation: true
