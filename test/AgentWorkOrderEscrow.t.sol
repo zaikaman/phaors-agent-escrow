@@ -149,6 +149,176 @@ contract AgentWorkOrderEscrowTest {
         require(token.balanceOf(address(buyer)) == 2_000_000, "buyer not refunded");
     }
 
+    function testExpiredRefundFromSubmittedOrder() public {
+        beforeEach();
+        buyer = new BuyerActor();
+        worker = new WorkerActor();
+        token.mint(address(buyer), 3_000_000);
+
+        uint256 id = buyer.createErc20Order(
+            escrow,
+            token,
+            address(worker),
+            address(0),
+            3_000_000,
+            uint64(block.timestamp + 1),
+            "ipfs://submitted-refund-task"
+        );
+
+        worker.accept(escrow, id);
+        worker.submit(escrow, id, "ipfs://submitted-refund-proof");
+        vm.warp(block.timestamp + 2);
+        buyer.refund(escrow, id);
+
+        AgentWorkOrderEscrow.WorkOrder memory order = escrow.getWorkOrder(id);
+        require(uint256(order.status) == uint256(AgentWorkOrderEscrow.Status.Refunded), "submitted order not refunded");
+        require(token.balanceOf(address(buyer)) == 3_000_000, "buyer did not recover submitted escrow");
+        require(token.balanceOf(address(worker)) == 0, "worker paid after refund");
+    }
+
+    function testRejectEmptyMetadata() public {
+        beforeEach();
+        token.approve(address(escrow), 1_000_000);
+
+        try escrow.createWorkOrder(
+            address(0),
+            address(0),
+            address(token),
+            1_000_000,
+            uint64(block.timestamp + 1 days),
+            ""
+        ) returns (uint256) {
+            revert("empty metadata accepted");
+        } catch {
+            require(escrow.nextWorkOrderId() == 1, "work order created with empty metadata");
+        }
+    }
+
+    function testRejectEmptyProof() public {
+        beforeEach();
+        worker = new WorkerActor();
+        token.approve(address(escrow), 1_000_000);
+
+        uint256 id = escrow.createWorkOrder(
+            address(worker),
+            address(0),
+            address(token),
+            1_000_000,
+            uint64(block.timestamp + 1 days),
+            "ipfs://task"
+        );
+
+        worker.accept(escrow, id);
+        require(!worker.trySubmit(escrow, id, ""), "empty proof accepted");
+
+        AgentWorkOrderEscrow.WorkOrder memory order = escrow.getWorkOrder(id);
+        require(uint256(order.status) == uint256(AgentWorkOrderEscrow.Status.Accepted), "status changed after empty proof");
+    }
+
+    function testRejectZeroAmount() public {
+        beforeEach();
+        token.approve(address(escrow), 1_000_000);
+
+        try escrow.createWorkOrder(
+            address(0),
+            address(0),
+            address(token),
+            0,
+            uint64(block.timestamp + 1 days),
+            "ipfs://zero-amount"
+        ) returns (uint256) {
+            revert("zero amount accepted");
+        } catch {
+            require(escrow.nextWorkOrderId() == 1, "work order created with zero amount");
+        }
+    }
+
+    function testRejectNativeAmountMismatch() public {
+        beforeEach();
+
+        try escrow.createWorkOrder{value: 2 ether}(
+            address(0),
+            address(0),
+            address(0),
+            1 ether,
+            uint64(block.timestamp + 1 days),
+            "ipfs://native-mismatch"
+        ) returns (uint256) {
+            revert("native mismatch accepted");
+        } catch {
+            require(address(escrow).balance == 0, "escrow retained mismatched native value");
+            require(escrow.nextWorkOrderId() == 1, "work order created with mismatched native value");
+        }
+    }
+
+    function testRejectAcceptAfterDeadline() public {
+        beforeEach();
+        worker = new WorkerActor();
+        token.approve(address(escrow), 1_000_000);
+
+        uint256 id = escrow.createWorkOrder(
+            address(worker),
+            address(0),
+            address(token),
+            1_000_000,
+            uint64(block.timestamp + 1),
+            "ipfs://deadline-task"
+        );
+
+        vm.warp(block.timestamp + 2);
+        require(!worker.tryAccept(escrow, id), "accepted after deadline");
+
+        AgentWorkOrderEscrow.WorkOrder memory order = escrow.getWorkOrder(id);
+        require(uint256(order.status) == uint256(AgentWorkOrderEscrow.Status.Open), "status changed after late accept");
+    }
+
+    function testBuyerCanReleaseWithoutVerifier() public {
+        beforeEach();
+        worker = new WorkerActor();
+        otherWorker = new WorkerActor();
+        token.approve(address(escrow), 1_000_000);
+
+        uint256 id = escrow.createWorkOrder(
+            address(worker),
+            address(0),
+            address(token),
+            1_000_000,
+            uint64(block.timestamp + 1 days),
+            "ipfs://buyer-release-task"
+        );
+
+        worker.accept(escrow, id);
+        worker.submit(escrow, id, "ipfs://buyer-release-proof");
+        require(!otherWorker.tryRelease(escrow, id), "zero verifier authorized unrelated account");
+
+        escrow.releasePayment(id);
+        AgentWorkOrderEscrow.WorkOrder memory order = escrow.getWorkOrder(id);
+        require(uint256(order.status) == uint256(AgentWorkOrderEscrow.Status.Released), "buyer release failed");
+        require(token.balanceOf(address(worker)) == 1_000_000, "worker not paid by buyer release");
+    }
+
+    function testZeroVerifierDoesNotAuthorizeRandomAccount() public {
+        beforeEach();
+        worker = new WorkerActor();
+        otherWorker = new WorkerActor();
+        token.approve(address(escrow), 1_000_000);
+
+        uint256 id = escrow.createWorkOrder(
+            address(worker),
+            address(0),
+            address(token),
+            1_000_000,
+            uint64(block.timestamp + 1 days),
+            "ipfs://zero-verifier-task"
+        );
+
+        worker.accept(escrow, id);
+        worker.submit(escrow, id, "ipfs://zero-verifier-proof");
+
+        require(!otherWorker.tryRelease(escrow, id), "random account released zero-verifier order");
+        require(token.balanceOf(address(worker)) == 0, "worker paid by random account");
+    }
+
     function testNativeEscrowRelease() public {
         beforeEach();
         nativeBuyer = new BuyerActor();
@@ -173,6 +343,36 @@ contract AgentWorkOrderEscrowTest {
         AgentWorkOrderEscrow.WorkOrder memory order = escrow.getWorkOrder(id);
         require(uint256(order.status) == uint256(AgentWorkOrderEscrow.Status.Released), "not released");
         require(address(worker).balance == beforeBalance + 1 ether, "worker native balance wrong");
+    }
+
+    function testMaliciousNativeReceiverCannotReenterRelease() public {
+        beforeEach();
+        nativeBuyer = new BuyerActor();
+        verifier = new VerifierActor();
+        MaliciousWorker maliciousWorker = new MaliciousWorker();
+        payable(address(nativeBuyer)).transfer(1 ether);
+
+        uint256 id = nativeBuyer.createNativeOrder(
+            escrow,
+            address(maliciousWorker),
+            address(verifier),
+            1 ether,
+            uint64(block.timestamp + 1 days),
+            "ipfs://malicious-task"
+        );
+
+        maliciousWorker.accept(escrow, id);
+        maliciousWorker.submit(escrow, id, "ipfs://malicious-proof");
+        maliciousWorker.arm(escrow, id);
+        verifier.release(escrow, id);
+
+        AgentWorkOrderEscrow.WorkOrder memory order = escrow.getWorkOrder(id);
+        AgentWorkOrderEscrow.AgentStats memory stats = escrow.getAgentStats(address(maliciousWorker));
+        require(uint256(order.status) == uint256(AgentWorkOrderEscrow.Status.Released), "order not released");
+        require(maliciousWorker.reentryBlocked(), "reentrant release was not blocked");
+        require(address(maliciousWorker).balance == 1 ether, "malicious worker received wrong payout");
+        require(address(escrow).balance == 0, "escrow drained or retained native funds");
+        require(stats.completed == 1, "completion counted more than once or not at all");
     }
 
     function testErc20ApproveFailureRejected() public {
@@ -212,6 +412,14 @@ contract WorkerActor {
 
     function submit(AgentWorkOrderEscrow escrow, uint256 id, string calldata proofURI) external {
         escrow.submitProof(id, proofURI);
+    }
+
+    function trySubmit(AgentWorkOrderEscrow escrow, uint256 id, string calldata proofURI) external returns (bool) {
+        try escrow.submitProof(id, proofURI) {
+            return true;
+        } catch {
+            return false;
+        }
     }
 
     function tryRelease(AgentWorkOrderEscrow escrow, uint256 id) external returns (bool) {
@@ -267,4 +475,35 @@ contract BuyerActor {
     }
 
     receive() external payable {}
+}
+
+contract MaliciousWorker {
+    AgentWorkOrderEscrow private targetEscrow;
+    uint256 private targetId;
+    bool private armed;
+    bool public reentryBlocked;
+
+    function accept(AgentWorkOrderEscrow escrow, uint256 id) external {
+        escrow.acceptWorkOrder(id);
+    }
+
+    function submit(AgentWorkOrderEscrow escrow, uint256 id, string calldata proofURI) external {
+        escrow.submitProof(id, proofURI);
+    }
+
+    function arm(AgentWorkOrderEscrow escrow, uint256 id) external {
+        targetEscrow = escrow;
+        targetId = id;
+        armed = true;
+    }
+
+    receive() external payable {
+        if (!armed) return;
+        armed = false;
+        try targetEscrow.releasePayment(targetId) {
+            revert("reentrant release succeeded");
+        } catch {
+            reentryBlocked = true;
+        }
+    }
 }
