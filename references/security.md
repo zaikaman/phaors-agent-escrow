@@ -15,6 +15,7 @@ This Skill is built as a production-style hackathon primitive, but it is not a s
 ## Known Tradeoffs
 
 - Work and review deadlines use block timestamps. This is appropriate for escrow expiry windows measured in minutes or hours, not second-level precision.
+- Foundry's `block-timestamp` lint is intentionally excluded in `foundry.toml` because this contract's core primitive is deadline-based escrow. Keep deadlines coarse enough that small validator timestamp drift cannot materially change outcomes.
 - Metadata and proof contents are referenced by URI. Agents should include hashes in the referenced JSON when integrity matters.
 - Task and proof metadata are validated against JSON Schemas before create and release flows proceed.
 - Disputes are intentionally simple: the buyer or configured verifier controls release. The buyer can refund open/accepted work after `workDeadline`, while submitted work remains reviewable until `reviewDeadline`.

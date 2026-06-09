@@ -1,0 +1,115 @@
+{
+  "schema": "pharos-agent-escrow/agent-capabilities/v1",
+  "skill": "pharos-agent-escrow",
+  "networkDefault": "atlantic-testnet",
+  "roles": [
+    {
+      "id": "planner-agent",
+      "displayName": "Planner Agent",
+      "capabilities": [
+        "create-work-order",
+        "fund-native-escrow",
+        "fund-erc20-escrow",
+        "select-worker",
+        "set-verifier",
+        "cancel-open-work",
+        "refund-expired-work"
+      ],
+      "requiredInputs": [
+        "task objective",
+        "acceptance criteria",
+        "worker or worker selection policy",
+        "asset",
+        "amount",
+        "work deadline",
+        "review deadline"
+      ],
+      "recommendedCommands": [
+        "npm run create",
+        "npm run recommend-worker",
+        "npm run doctor"
+      ]
+    },
+    {
+      "id": "worker-agent",
+      "displayName": "Worker Agent",
+      "capabilities": [
+        "find-open-work",
+        "rank-open-work",
+        "accept-work-order",
+        "submit-proof",
+        "write-sha256-proof"
+      ],
+      "taskKinds": [
+        "research",
+        "code-review",
+        "data-collection",
+        "content-brief",
+        "verification-support"
+      ],
+      "recommendedCommands": [
+        "npm run find-open-work",
+        "npm run rank-open-work",
+        "npm run work",
+        "npm run write-hash-artifact"
+      ]
+    },
+    {
+      "id": "verifier-agent",
+      "displayName": "Verifier Agent",
+      "capabilities": [
+        "load-task-metadata",
+        "load-proof-metadata",
+        "validate-json-schema",
+        "verify-sha256-uri",
+        "deterministic-proof-review",
+        "optional-groq-proof-review",
+        "release-payment"
+      ],
+      "recommendedCommands": [
+        "npm run verify-and-release"
+      ]
+    },
+    {
+      "id": "reputation-agent",
+      "displayName": "Reputation Agent",
+      "capabilities": [
+        "read-agent-stats",
+        "index-escrow-events",
+        "summarize-completion-rate",
+        "summarize-refund-rate",
+        "summarize-asset-volume",
+        "list-latest-proofs"
+      ],
+      "recommendedCommands": [
+        "npm run reputation",
+        "npm run reputation-index"
+      ]
+    },
+    {
+      "id": "marketplace-agent",
+      "displayName": "Marketplace Agent",
+      "capabilities": [
+        "rank-open-work",
+        "recommend-worker",
+        "route-task-by-capability",
+        "compose-planner-worker-verifier-flow"
+      ],
+      "routingSignals": [
+        "task kind",
+        "asset",
+        "minimum reward",
+        "deadline urgency",
+        "worker completion rate",
+        "selected-asset volume",
+        "recent proof history"
+      ],
+      "recommendedCommands": [
+        "npm run marketplace-demo",
+        "npm run rank-open-work",
+        "npm run recommend-worker",
+        "npm run reputation-index"
+      ]
+    }
+  ]
+}

@@ -50,6 +50,32 @@ Flow:
 6. Reputation Agent reads worker stats and selected-asset volume released.
 
 The script writes generated task, proof, and verifier decision JSON to `demo-artifacts/<workOrderId>/`.
+It also writes `judge-transcript.json` with actors, balances before/after, transaction links, verifier decision, hashes, local artifact paths, and worker reputation delta.
+
+## Content-Addressed Metadata
+
+Use this when a task or proof should use a deterministic `sha256:` URI without IPFS:
+
+```powershell
+npm run write-hash-artifact -- --kind task --input .\assets\templates\task.metadata.json --out-dir demo-artifacts/hash-artifacts --name task
+npm run write-hash-artifact -- --kind proof --input .\assets\templates\proof.metadata.json --out-dir demo-artifacts/hash-artifacts --name proof
+```
+
+The verifier can resolve matching `sha256:` artifacts under `demo-artifacts/`, or explicit paths:
+
+```powershell
+npm run verify-and-release -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --id <workOrderId> --metadata-file <task.json> --proof-file <proof.json> --dry-run
+```
+
+## Reputation Index
+
+Build a persistent JSON index from escrow events:
+
+```powershell
+npm run reputation-index -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --from-block 23800000 --out demo-artifacts/reputation-index.json
+```
+
+The report includes completed jobs, refund rate, selected-asset volume, average review time, latest proofs, and explorer links.
 
 ## Standalone Verifier Release
 

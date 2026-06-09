@@ -84,6 +84,21 @@ const taskBrief = (args.task as string | undefined) ||
 const marketplaceMode = Boolean(args.marketplace) || Boolean(args["marketplace-transcript"]);
 const transactions: Record<string, string> = {};
 
+type BalanceSnapshot = {
+  native: Record<string, string>;
+  selectedAsset: Record<string, string> | null;
+};
+
+type ReputationSnapshot = {
+  accepted: string;
+  submitted: string;
+  completed: string;
+  refunded: string;
+  completionRate: number | null;
+  selectedAssetVolumeReleased: string;
+  selectedAssetVolumeFormatted: string;
+};
+
 function sha256Json(value: unknown) {
   return createCryptoHash("sha256").update(JSON.stringify(value)).digest("hex");
 }
@@ -280,42 +295,124 @@ async function callGroq<T>(role: AgentRole, prompt: string): Promise<T> {
   return extractJsonObject<T>(text);
 }
 
-async function printBalances() {
+async function getBalanceSnapshot(): Promise<BalanceSnapshot> {
   const [plannerBalance, workerBalance, verifierBalance] = await Promise.all([
     publicClient.getBalance({ address: planner.account.address }),
     publicClient.getBalance({ address: worker.account.address }),
     publicClient.getBalance({ address: verifier.account.address }),
   ]);
 
-  console.log("wallets");
-  console.log(`  Planner Agent:  ${planner.account.address} (${formatEther(plannerBalance)} ${network.nativeToken})`);
-  console.log(`  Worker Agent:   ${worker.account.address} (${formatEther(workerBalance)} ${network.nativeToken})`);
-  console.log(`  Verifier Agent: ${verifier.account.address} (${formatEther(verifierBalance)} ${network.nativeToken})`);
+  const native = {
+    planner: formatEther(plannerBalance),
+    worker: formatEther(workerBalance),
+    verifier: formatEther(verifierBalance),
+  };
+  let selectedAsset: Record<string, string> | null = null;
+  if (asset !== zeroAddress()) {
+    const [plannerTokenBalance, workerTokenBalance, verifierTokenBalance] = await Promise.all([
+      publicClient.readContract({
+        address: asset,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [planner.account.address],
+      }),
+      publicClient.readContract({
+        address: asset,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [worker.account.address],
+      }),
+      publicClient.readContract({
+        address: asset,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [verifier.account.address],
+      }),
+    ]);
+    selectedAsset = {
+      planner: formatUnits(plannerTokenBalance, assetDecimals),
+      worker: formatUnits(workerTokenBalance, assetDecimals),
+      verifier: formatUnits(verifierTokenBalance, assetDecimals),
+    };
+  }
 
-  if (asset === zeroAddress() && plannerBalance <= amount) {
+  return { native, selectedAsset };
+}
+
+async function printBalances() {
+  const snapshot = await getBalanceSnapshot();
+  console.log("wallets");
+  console.log(`  Planner Agent:  ${planner.account.address} (${snapshot.native.planner} ${network.nativeToken})`);
+  console.log(`  Worker Agent:   ${worker.account.address} (${snapshot.native.worker} ${network.nativeToken})`);
+  console.log(`  Verifier Agent: ${verifier.account.address} (${snapshot.native.verifier} ${network.nativeToken})`);
+
+  if (asset === zeroAddress() && parseUnitsLike(snapshot.native.planner) <= amount) {
     throw new Error(`Planner Agent balance must exceed escrow amount ${formatEther(amount)} ${network.nativeToken}.`);
   }
   if (asset !== zeroAddress()) {
-    const plannerTokenBalance = await publicClient.readContract({
-      address: asset,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [planner.account.address],
-    });
-    console.log(`  Planner Agent ${assetLabel}: ${formatUnits(plannerTokenBalance, assetDecimals)}`);
-    if (plannerTokenBalance < amount) {
+    console.log(`  Planner Agent ${assetLabel}: ${snapshot.selectedAsset?.planner}`);
+    if (parseUnitsLike(snapshot.selectedAsset?.planner || "0", assetDecimals) < amount) {
       throw new Error(`Planner Agent needs at least ${formatUnits(amount, assetDecimals)} ${assetLabel}.`);
     }
-    if (plannerBalance === 0n) {
+    if (parseUnitsLike(snapshot.native.planner) === 0n) {
       throw new Error("Planner Agent needs native token for ERC20 approve and create gas.");
     }
   }
-  if (workerBalance === 0n) {
+  if (parseUnitsLike(snapshot.native.worker) === 0n) {
     throw new Error("Worker Agent needs native token for accept and submit gas.");
   }
-  if (verifierBalance === 0n) {
+  if (parseUnitsLike(snapshot.native.verifier) === 0n) {
     throw new Error("Verifier Agent needs native token for release gas.");
   }
+  return snapshot;
+}
+
+function parseUnitsLike(value: string, decimals = 18) {
+  const [whole, fraction = ""] = value.split(".");
+  const padded = `${fraction}${"0".repeat(decimals)}`.slice(0, decimals);
+  return BigInt(whole || "0") * (10n ** BigInt(decimals)) + BigInt(padded || "0");
+}
+
+async function readWorkerReputation(): Promise<ReputationSnapshot> {
+  const [stats, assetVolume] = await Promise.all([
+    publicClient.readContract({
+      address: escrowAddress,
+      abi: escrowAbi,
+      functionName: "getAgentStats",
+      args: [worker.account.address],
+    }),
+    publicClient.readContract({
+      address: escrowAddress,
+      abi: escrowAbi,
+      functionName: "getAgentAssetVolumeReleased",
+      args: [worker.account.address, asset],
+    }),
+  ]);
+  const accepted = Number(stats.accepted);
+  const completed = Number(stats.completed);
+  return {
+    accepted: stats.accepted.toString(),
+    submitted: stats.submitted.toString(),
+    completed: stats.completed.toString(),
+    refunded: stats.refunded.toString(),
+    completionRate: accepted === 0 ? null : completed / accepted,
+    selectedAssetVolumeReleased: assetVolume.toString(),
+    selectedAssetVolumeFormatted: formatUnits(assetVolume, assetDecimals),
+  };
+}
+
+function reputationDelta(before: ReputationSnapshot, after: ReputationSnapshot) {
+  return {
+    accepted: Number(after.accepted) - Number(before.accepted),
+    submitted: Number(after.submitted) - Number(before.submitted),
+    completed: Number(after.completed) - Number(before.completed),
+    refunded: Number(after.refunded) - Number(before.refunded),
+    selectedAssetVolumeReleased: (BigInt(after.selectedAssetVolumeReleased) - BigInt(before.selectedAssetVolumeReleased)).toString(),
+    selectedAssetVolumeFormatted: formatUnits(
+      BigInt(after.selectedAssetVolumeReleased) - BigInt(before.selectedAssetVolumeReleased),
+      assetDecimals
+    ),
+  };
 }
 
 console.log("Pharos Agent Escrow judge demo");
@@ -323,7 +420,8 @@ console.log(`network: ${network.name} (${network.chainId})`);
 console.log(`escrow: ${escrowAddress}`);
 console.log(`asset: ${asset === zeroAddress() ? "native" : asset}`);
 console.log(`amount: ${formatUnits(amount, assetDecimals)} ${assetLabel}`);
-await printBalances();
+const balancesBefore = await printBalances();
+const reputationBefore = await readWorkerReputation();
 
 let marketplaceTranscript: Record<string, unknown> | undefined;
 if (marketplaceMode) {
@@ -482,38 +580,17 @@ await waitAndPrint(publicClient, network, releaseHash);
 transactions.releasePayment = `${network.explorerUrl}/tx/${releaseHash}`;
 
 console.log(`\n${marketplaceMode ? "6" : "5"}. Reputation Agent summarizes worker history`);
-const [order, stats, assetVolume] = await Promise.all([
+const [order, balancesAfter, finalReputation] = await Promise.all([
   publicClient.readContract({
     address: escrowAddress,
     abi: escrowAbi,
     functionName: "getWorkOrder",
     args: [id],
   }),
-  publicClient.readContract({
-    address: escrowAddress,
-    abi: escrowAbi,
-    functionName: "getAgentStats",
-    args: [worker.account.address],
-  }),
-  publicClient.readContract({
-    address: escrowAddress,
-    abi: escrowAbi,
-    functionName: "getAgentAssetVolumeReleased",
-    args: [worker.account.address, asset],
-  }),
+  getBalanceSnapshot(),
+  readWorkerReputation(),
 ]);
-const accepted = Number(stats.accepted);
-const completed = Number(stats.completed);
-const completionRate = accepted === 0 ? null : completed / accepted;
-const finalReputation = {
-  accepted: stats.accepted.toString(),
-  submitted: stats.submitted.toString(),
-  completed: stats.completed.toString(),
-  refunded: stats.refunded.toString(),
-  completionRate,
-  selectedAssetVolumeReleased: assetVolume.toString(),
-  selectedAssetVolumeFormatted: formatUnits(assetVolume, assetDecimals),
-};
+const workerReputationDelta = reputationDelta(reputationBefore, finalReputation);
 if (marketplaceMode) {
   marketplaceTranscript = {
     ...(marketplaceTranscript || {}),
@@ -523,6 +600,7 @@ if (marketplaceMode) {
       rationale: decision.rationale,
     },
     finalReputation,
+    workerReputationDelta,
     transactions,
   };
 }
@@ -532,25 +610,48 @@ mkdirSync(artifactDir, { recursive: true });
 writeFileSync(join(artifactDir, "task.json"), JSON.stringify(task, null, 2));
 writeFileSync(join(artifactDir, "proof.json"), JSON.stringify(proof, null, 2));
 writeFileSync(join(artifactDir, "verifier-decision.json"), JSON.stringify(decision, null, 2));
-
-console.log(JSON.stringify(
-  {
-    workOrderId: id.toString(),
-    finalStatus: Number(order.status),
+const transcript = {
+  schema: "pharos-agent-escrow/judge-transcript/v1",
+  generatedAt: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
+  workOrderId: id.toString(),
+  finalStatus: Number(order.status),
+  network: network.name,
+  escrow: escrowAddress,
+  actors: {
     planner: planner.account.address,
     worker: worker.account.address,
     verifier: verifier.account.address,
-    metadataURI: order.metadataURI,
-    proofURI: order.proofURI,
-    asset: asset === zeroAddress() ? "native" : asset,
-    assetLabel,
-    amount: formatUnits(amount, assetDecimals),
-    explorer: `${network.explorerUrl}/address/${escrowAddress}`,
-    transactions,
-    marketplaceTranscript: marketplaceTranscript || null,
-    workerReputation: finalReputation,
-    localArtifacts: artifactDir,
   },
-  null,
-  2
-));
+  asset: asset === zeroAddress() ? "native" : asset,
+  assetLabel,
+  amount: formatUnits(amount, assetDecimals),
+  balances: {
+    before: balancesBefore,
+    after: balancesAfter,
+  },
+  metadataURI: order.metadataURI,
+  proofURI: order.proofURI,
+  hashes: {
+    task: taskHash,
+    proof: proofHash,
+  },
+  verifierDecision: decision,
+  transactions,
+  marketplaceTranscript: marketplaceTranscript || null,
+  workerReputation: {
+    before: reputationBefore,
+    after: finalReputation,
+    delta: workerReputationDelta,
+  },
+  explorer: `${network.explorerUrl}/address/${escrowAddress}`,
+  localArtifacts: {
+    directory: artifactDir,
+    task: join(artifactDir, "task.json"),
+    proof: join(artifactDir, "proof.json"),
+    verifierDecision: join(artifactDir, "verifier-decision.json"),
+    transcript: join(artifactDir, "judge-transcript.json"),
+  },
+};
+writeFileSync(join(artifactDir, "judge-transcript.json"), JSON.stringify(transcript, null, 2));
+
+console.log(JSON.stringify(transcript, null, 2));

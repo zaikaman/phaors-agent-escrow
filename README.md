@@ -77,6 +77,8 @@ Run the judge-grade three-agent USDC Groq demo:
 npm run judge-demo-usdc -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
 ```
 
+The demo writes a clean transcript to `demo-artifacts/<workOrderId>/judge-transcript.json`, including actors, balances before/after, transaction links, verifier decision, hashes, local artifact paths, and worker reputation delta.
+
 Run the Phase 2 mini marketplace composition demo:
 
 ```powershell
@@ -107,6 +109,9 @@ Reusable surfaces:
 - Deterministic verifier policy before release, with optional Groq semantic review
 - Marketplace scoring scripts for ranked open work and worker recommendations
 - Event and contract-read based reputation summaries
+- Persistent event-backed reputation index in `scripts/reputation-index.ts`
+- Structured agent capability manifest in `assets/agent-capabilities.manifest.json`
+- Content-addressed task/proof artifact writer in `scripts/write-hash-artifact.ts`
 - Live Atlantic deployment with explorer links
 
 ## What Phase 2 Agents Can Build With It
@@ -213,6 +218,19 @@ Recommend workers for a planner or marketplace agent:
 npm run recommend-worker -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8 --candidates <workerA>,<workerB> --limit 10
 ```
 
+Build a persistent event-backed reputation index:
+
+```powershell
+npm run reputation-index -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --from-block 23800000 --out demo-artifacts/reputation-index.json
+```
+
+Write content-addressed task or proof metadata before create/submit:
+
+```powershell
+npm run write-hash-artifact -- --kind task --input .\assets\templates\task.metadata.json --out-dir demo-artifacts/hash-artifacts --name task
+npm run write-hash-artifact -- --kind proof --input .\assets\templates\proof.metadata.json --out-dir demo-artifacts/hash-artifacts --name proof
+```
+
 Verify and release submitted work:
 
 ```powershell
@@ -242,7 +260,7 @@ npm run events -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf
 npm run reputation -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --agent <agentAddress> --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8
 ```
 
-## Why This Can Win
+## Why We Built It This Way
 
 `pharos-agent-escrow` directly matches the Pharos AI Agent economy vision: agents can coordinate, transact, verify work, and build reputation on-chain. It is original relative to basic token, NFT, transfer, Uniswap, and x402 demos because it creates a higher-level work market primitive.
 
@@ -264,5 +282,6 @@ Judging alignment:
 - Contract: `assets/AgentWorkOrderEscrow.sol`
 - Metadata templates: `assets/templates/`
 - Scripts: `scripts/`
+- Agent capability manifest: `assets/agent-capabilities.manifest.json`
 - Tests: `test/AgentWorkOrderEscrow.t.sol`
 - Phase 2 mini-agent example: `agents/planner-worker-verifier-demo.md`

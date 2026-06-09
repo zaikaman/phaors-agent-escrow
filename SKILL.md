@@ -36,6 +36,7 @@ Metadata templates:
 - Proof metadata: `assets/templates/proof.metadata.json`
 - Task schema: `assets/schemas/task.schema.json`
 - Proof schema: `assets/schemas/proof.schema.json`
+- Agent capability manifest: `assets/agent-capabilities.manifest.json`
 
 ## Pharos Network Defaults
 
@@ -71,6 +72,7 @@ Common commands:
 ```bash
 npx tsx scripts/deploy.ts
 npm run doctor -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
+npm run write-hash-artifact -- --kind task --input assets/templates/task.metadata.json --out-dir demo-artifacts/hash-artifacts --name task
 npx tsx scripts/create-work-order.ts --escrow <address> --asset native --amount 0.1 --work-deadline-minutes 60 --review-period-minutes 60 --metadata "ipfs://..."
 npx tsx scripts/accept-submit-release.ts accept --escrow <address> --id 1
 npx tsx scripts/accept-submit-release.ts submit --escrow <address> --id 1 --proof "ipfs://..."
@@ -88,6 +90,7 @@ npm run rank-open-work -- --network atlantic-testnet --escrow 0x047119bdf422fc82
 npm run recommend-worker -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --asset native --candidates <workerA>,<workerB> --limit 10
 npx tsx scripts/events.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
 npx tsx scripts/reputation.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --agent <agentAddress> --asset native
+npm run reputation-index -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --from-block <block> --out demo-artifacts/reputation-index.json
 ```
 
 ## Judge Demo
@@ -95,6 +98,8 @@ npx tsx scripts/reputation.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f12
 Use `npm run judge-demo-usdc` for the strongest Phase 1 walkthrough. It uses Atlantic USDC, three funded wallets, ERC20 approval, on-chain escrow, proof verification, release, and asset-specific reputation. Use `scripts/judge-demo.ts --asset native` for the simpler native-token variant.
 
 Use `npm run marketplace-demo` for the Phase 2 composition walkthrough. It runs the planner, marketplace recommender, worker, verifier, and reputation roles in one command and prints a structured transcript with explorer links.
+
+The judge demo writes `demo-artifacts/<workOrderId>/judge-transcript.json` with actors, balances before/after, transaction links, verifier decision, local artifact paths, and worker reputation delta.
 
 The USDC demo uses three funded wallets and real Groq LLM calls:
 
@@ -117,7 +122,13 @@ Use `scripts/rank-open-work.ts` when a worker or marketplace agent needs priorit
 
 Use `scripts/recommend-worker.ts` when a planner or marketplace agent needs to rank candidate workers. It scores workers by completed jobs, submission rate, refund rate, selected-asset volume, and recent activity. Output is structured JSON for direct agent routing.
 
+Use `assets/agent-capabilities.manifest.json` when an agent needs structured role and capability descriptors for planner, worker, verifier, reputation, and marketplace composition.
+
+Use `scripts/reputation-index.ts` when a reputation or marketplace agent needs a persistent JSON index from escrow events. It reports completed jobs, refund rate, selected-asset volume, average review time, latest proofs, and explorer links.
+
 ## Verifier Policy
+
+Use `scripts/write-hash-artifact.ts` before create or submit flows when metadata/proof should be content-addressed without IPFS. It validates task or proof JSON, writes normalized JSON, computes `sha256(JSON.stringify(json))`, and prints a `sha256:` URI. `scripts/verify-and-release.ts` can resolve those URIs from `demo-artifacts/` or from explicit `--metadata-file` / `--proof-file` paths.
 
 Use `scripts/verify-and-release.ts` when a buyer or verifier agent needs to check a submitted proof before release. It:
 
