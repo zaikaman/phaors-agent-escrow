@@ -118,10 +118,11 @@ Use `scripts/verify-and-release.ts` when a buyer or verifier agent needs to chec
 - Reads the work order from-chain.
 - Loads task metadata and proof JSON from `https://`, `ipfs://`, `file://`, local paths, or `sha256:` content-addressed local artifacts.
 - Validates task and proof JSON against `assets/schemas/`, then checks acceptance criteria, output format, and artifact evidence shape.
-- Calls Groq `qwen/qwen3-32b` for semantic review.
-- Sends `releasePayment` only when deterministic validation and Groq review both pass.
+- Uses deterministic verification by default, without requiring an LLM.
+- Optionally calls Groq `qwen/qwen3-32b` for semantic review with `--policy groq` or `--policy both`.
+- Sends `releasePayment` only when the selected policy passes.
 
-Use `--dry-run` to validate without sending a transaction. Use `--release-env <ENV_NAME>` to choose the signing wallet; default is `PHAROS_PRIVATE_KEY_3`.
+Use `--dry-run` to validate without sending a transaction. Use `--no-llm` or `--policy deterministic` for deterministic-only review. Use `--release-env <ENV_NAME>` to choose the signing wallet; default is `PHAROS_PRIVATE_KEY_3`.
 
 ## Agent Guidance
 

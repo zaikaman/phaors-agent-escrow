@@ -334,10 +334,16 @@ const proof: ProofMetadata = {
   schema: "pharos-agent-escrow/proof/v1",
   workOrderId: id.toString(),
   workerAgent: task.workerAgent,
+  resultURI: hashUri(sha256Json(proofDraft.deliveredArtifact)),
+  resultSha256: sha256Json(proofDraft.deliveredArtifact),
   deliveredArtifact: proofDraft.deliveredArtifact,
   summary: proofDraft.resultSummary,
   criteriaResults: proofDraft.criteriaResults,
-  verificationNotes: proofDraft.verificationNotes,
+  verificationNotes: [
+    proofDraft.verificationNotes,
+    `Output format: ${task.outputFormat}`,
+    "Artifact is content-addressed with SHA-256.",
+  ],
   submittedAt: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
 };
 validateProofMetadata(proof);

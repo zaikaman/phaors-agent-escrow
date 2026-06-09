@@ -50,10 +50,13 @@ Use this when a work order is already in `Submitted` status and the verifier sho
 npx tsx scripts/verify-and-release.ts --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --id <workOrderId>
 ```
 
+The default verifier policy is deterministic and does not require Groq. It checks schema validity, criteria coverage, artifact URI/hash evidence, and output format evidence. Use `--policy both` to require deterministic checks plus Groq semantic review.
+
 For a no-transaction validation pass:
 
 ```powershell
 npx tsx scripts/verify-and-release.ts --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --id <workOrderId> --dry-run
+npx tsx scripts/verify-and-release.ts --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --id <workOrderId> --dry-run --policy both
 ```
 
 ## Inspect Events

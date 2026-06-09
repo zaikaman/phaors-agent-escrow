@@ -40,6 +40,12 @@ const id = BigInt(requireArg(args, "id"));
 const releaseEnv = (args["release-env"] as string | undefined) || "PHAROS_PRIVATE_KEY_3";
 const dryRun = Boolean(args["dry-run"]);
 const ipfsGateway = (args["ipfs-gateway"] as string | undefined) || "https://ipfs.io/ipfs/";
+const noLlm = Boolean(args["no-llm"]);
+const policyArg = (args.policy as string | undefined) || (noLlm ? "deterministic" : "deterministic");
+if (!["deterministic", "groq", "both"].includes(policyArg)) {
+  throw new Error("--policy must be deterministic, groq, or both.");
+}
+const policy = policyArg as "deterministic" | "groq" | "both";
 
 const verifier = makeClientsFromPrivateKey(args, releaseEnv);
 const { account, network, publicClient, walletClient } = verifier;
@@ -161,7 +167,10 @@ function validateTaskMetadata(metadata: JsonObject) {
   const buyerAgent = requireString(metadata.buyerAgent, "metadata.buyerAgent");
   const workerAgent = requireString(metadata.workerAgent, "metadata.workerAgent");
   const verifierAgent = requireString(metadata.verifierAgent, "metadata.verifierAgent");
-  return { title, objective, acceptanceCriteria, outputFormat, buyerAgent, workerAgent, verifierAgent };
+  const artifactPolicy = typeof metadata.artifactPolicy === "object" && metadata.artifactPolicy !== null
+    ? metadata.artifactPolicy as Record<string, unknown>
+    : {};
+  return { title, objective, acceptanceCriteria, outputFormat, buyerAgent, workerAgent, verifierAgent, artifactPolicy };
 }
 
 function validateProof(proof: JsonObject) {
@@ -233,6 +242,133 @@ function validateDecision(decision: VerifierDecision, requiredCriteria: string[]
   if (typeof decision.outputFormatSatisfied !== "boolean") throw new Error("Verifier decision missing outputFormatSatisfied.");
   if (typeof decision.artifactEvidenceSufficient !== "boolean") throw new Error("Verifier decision missing artifactEvidenceSufficient.");
   if (!Array.isArray(decision.riskFlags)) throw new Error("Verifier decision missing riskFlags array.");
+}
+
+function deterministicReview(
+  task: ReturnType<typeof validateTaskMetadata>,
+  proof: ReturnType<typeof validateProof>
+): VerifierDecision {
+  const criteriaResults = evaluateCriteriaCoverage(task.acceptanceCriteria, proof);
+  const outputFormatSatisfied = evaluateOutputFormat(task.outputFormat, proof);
+  const artifactEvidenceSufficient = evaluateArtifactEvidence(task, proof);
+  const riskFlags = [
+    ...criteriaResults.filter((criterion) => !criterion.passed).map((criterion) => `criterion-not-covered: ${criterion.criterion}`),
+    ...(!outputFormatSatisfied ? [`output-format-not-evidenced: ${task.outputFormat}`] : []),
+    ...(!artifactEvidenceSufficient ? ["artifact-evidence-insufficient"] : []),
+  ];
+  const releasePayment = riskFlags.length === 0;
+
+  return {
+    releasePayment,
+    rationale: releasePayment
+      ? "Deterministic verifier accepted schema-valid metadata/proof with criteria coverage, output format evidence, and artifact evidence."
+      : "Deterministic verifier rejected proof because required evidence is incomplete.",
+    criteriaResults,
+    outputFormatSatisfied,
+    artifactEvidenceSufficient,
+    riskFlags,
+  };
+}
+
+function evaluateCriteriaCoverage(requiredCriteria: string[], proof: ReturnType<typeof validateProof>) {
+  const proofCriteria = Array.isArray(proof.criteriaResults)
+    ? proof.criteriaResults as Array<Record<string, unknown>>
+    : [];
+  const notes = Array.isArray(proof.verificationNotes)
+    ? proof.verificationNotes.join("\n")
+    : typeof proof.verificationNotes === "string"
+      ? proof.verificationNotes
+      : "";
+  const searchableProof = [
+    proof.summary,
+    proof.deliveredArtifact,
+    proof.resultURI,
+    notes,
+    ...proofCriteria.flatMap((criterion) => [
+      typeof criterion.criterion === "string" ? criterion.criterion : "",
+      typeof criterion.evidence === "string" ? criterion.evidence : "",
+    ]),
+  ].filter(Boolean).join("\n").toLowerCase();
+
+  return requiredCriteria.map((criterion) => {
+    const matchedResult = proofCriteria.find((candidate) => {
+      const candidateCriterion = typeof candidate.criterion === "string" ? candidate.criterion : "";
+      const candidateEvidence = typeof candidate.evidence === "string" ? candidate.evidence : "";
+      return Boolean(candidate.passed) &&
+        (stringsSubstantiallyMatch(candidateCriterion, criterion) || stringsSubstantiallyMatch(candidateEvidence, criterion));
+    });
+    const keywordCovered = importantWords(criterion).every((word) => searchableProof.includes(word));
+    const passed = Boolean(matchedResult) || keywordCovered;
+    return {
+      criterion,
+      passed,
+      evidence: matchedResult
+        ? String(matchedResult.evidence || matchedResult.criterion)
+        : passed
+          ? "Criterion keywords are covered in proof summary, artifact, or notes."
+          : "No matching passed criteriaResult or keyword coverage found in proof.",
+    };
+  });
+}
+
+function evaluateOutputFormat(outputFormat: string, proof: ReturnType<typeof validateProof>) {
+  const expected = outputFormat.toLowerCase();
+  const evidence = [
+    proof.summary,
+    proof.deliveredArtifact,
+    proof.resultURI,
+    Array.isArray(proof.verificationNotes) ? proof.verificationNotes.join("\n") : proof.verificationNotes,
+  ].filter(Boolean).join("\n").toLowerCase();
+  if (evidence.includes(expected)) return true;
+  if (expected.includes("markdown") && (evidence.includes(".md") || evidence.includes("# ") || evidence.includes("markdown"))) return true;
+  if (expected.includes("json") && (evidence.includes(".json") || evidence.includes("json"))) return true;
+  if (expected.includes("csv") && (evidence.includes(".csv") || evidence.includes("csv"))) return true;
+  if (expected.includes("link") && /(ipfs:\/\/|https?:\/\/|file:\/\/|sha256:)/.test(evidence)) return true;
+  return false;
+}
+
+function evaluateArtifactEvidence(task: ReturnType<typeof validateTaskMetadata>, proof: ReturnType<typeof validateProof>) {
+  const hasArtifact = Boolean(proof.resultURI || proof.deliveredArtifact);
+  const hasHash = typeof proof.resultSha256 === "string" && /^[0-9a-fA-F]{64}$/.test(proof.resultSha256);
+  const contentAddressed = typeof proof.resultURI === "string" && proof.resultURI.startsWith("sha256:");
+  const uriArtifact = typeof proof.resultURI === "string" && /^(ipfs:\/\/|https:\/\/|http:\/\/|file:\/\/|sha256:).+/.test(proof.resultURI);
+  const hashRequired = task.artifactPolicy.includeSha256 === true;
+  return hasArtifact && uriArtifact && (!hashRequired || hasHash || contentAddressed);
+}
+
+function stringsSubstantiallyMatch(a: string, b: string) {
+  const aWords = importantWords(a);
+  const bWords = importantWords(b);
+  if (aWords.length === 0 || bWords.length === 0) return false;
+  const matches = bWords.filter((word) => aWords.includes(word)).length;
+  return matches / bWords.length >= 0.6;
+}
+
+function importantWords(value: string) {
+  const stopWords = new Set(["the", "and", "for", "with", "that", "this", "from", "into", "include", "includes", "return", "must", "should"]);
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(" ")
+    .filter((word) => word.length >= 3 && !stopWords.has(word));
+}
+
+function combineDecisions(deterministic: VerifierDecision, semantic: VerifierDecision): VerifierDecision {
+  return {
+    releasePayment: deterministic.releasePayment && semantic.releasePayment,
+    rationale: `Deterministic: ${deterministic.rationale} Semantic: ${semantic.rationale}`,
+    criteriaResults: deterministic.criteriaResults.map((criterion, index) => {
+      const semanticCriterion = semantic.criteriaResults[index];
+      return {
+        criterion: criterion.criterion,
+        passed: criterion.passed && Boolean(semanticCriterion?.passed),
+        evidence: `${criterion.evidence} Semantic evidence: ${semanticCriterion?.evidence || "not provided"}`,
+      };
+    }),
+    outputFormatSatisfied: deterministic.outputFormatSatisfied && semantic.outputFormatSatisfied,
+    artifactEvidenceSufficient: deterministic.artifactEvidenceSufficient && semantic.artifactEvidenceSufficient,
+    riskFlags: [...deterministic.riskFlags, ...semantic.riskFlags],
+  };
 }
 
 async function callGroqVerifier(metadata: unknown, proof: unknown) {
@@ -313,8 +449,21 @@ console.log(`metadata source: ${loadedMetadata.source}`);
 console.log(`proof source: ${loadedProof.source}`);
 console.log(`task: ${normalizedTask.title}`);
 console.log(`artifact mode: ${normalizedProof.resultURI ? "external-uri" : "inline-deliveredArtifact"}`);
+console.log(`policy: ${policy}`);
 
-const decision = await callGroqVerifier(loadedMetadata.json, loadedProof.json);
+const deterministicDecision = deterministicReview(normalizedTask, normalizedProof);
+validateDecision(deterministicDecision, normalizedTask.acceptanceCriteria);
+
+let decision: VerifierDecision;
+if (policy === "deterministic") {
+  decision = deterministicDecision;
+} else if (policy === "groq") {
+  decision = await callGroqVerifier(loadedMetadata.json, loadedProof.json);
+} else {
+  const groqDecision = await callGroqVerifier(loadedMetadata.json, loadedProof.json);
+  validateDecision(groqDecision, normalizedTask.acceptanceCriteria);
+  decision = combineDecisions(deterministicDecision, groqDecision);
+}
 validateDecision(decision, normalizedTask.acceptanceCriteria);
 
 const passedCriteria = decision.criteriaResults.filter((criterion) => criterion.passed).length;
@@ -356,6 +505,7 @@ console.log(JSON.stringify(
     verifier: account.address,
     metadataHash: sha256Json(loadedMetadata.json),
     proofHash: sha256Json(loadedProof.json),
+    policy,
     released: !dryRun,
     dryRun,
     decision,

@@ -26,7 +26,7 @@ This Skill is built as a production-style hackathon primitive, but it is not a s
 - Confirm account, network, escrow address, asset, amount, work deadline, and review deadline before writes.
 - Prefer Atlantic testnet for demos.
 - For ERC20 orders, read decimals before amount conversion.
-- Verify proof against the metadata acceptance criteria before release.
+- Verify proof against the metadata acceptance criteria before release. Deterministic verification is the default; Groq semantic review is optional with `--policy groq` or `--policy both`.
 - Return explorer links for all writes.
 
 ## Validation Gate

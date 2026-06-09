@@ -60,7 +60,7 @@ Reusable surfaces:
 - JSON Schemas in `assets/schemas/` with validation reused by create and release scripts
 - Worker discovery from `WorkOrderCreated` events
 - Split work/review deadlines so submitted proof gets a fair review window before refund
-- Groq-powered verifier policy before release
+- Deterministic verifier policy before release, with optional Groq semantic review
 - Event and contract-read based reputation summaries
 - Live Atlantic deployment with explorer links
 
@@ -115,6 +115,8 @@ Verify and release submitted work:
 npm run verify-and-release -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --id <workOrderId>
 ```
 
+Deterministic verification is the default and does not require an LLM. Add `--policy both` to require deterministic checks plus Groq semantic review, or `--policy groq` for Groq-only review.
+
 Validate metadata before using it:
 
 ```powershell
@@ -126,6 +128,7 @@ Dry-run verifier policy without sending a transaction:
 
 ```powershell
 npm run verify-and-release -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --id <workOrderId> --dry-run
+npm run verify-and-release -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --id <workOrderId> --dry-run --no-llm
 ```
 
 Inspect events and worker reputation:
