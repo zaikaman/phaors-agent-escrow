@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsx scripts/foundry.ts build",
     "test": "tsx scripts/foundry.ts test",
+    "submit-check": "tsx scripts/submit-check.ts",
     "doctor": "tsx scripts/doctor.ts",
     "write-hash-artifact": "tsx scripts/write-hash-artifact.ts",
     "deploy": "tsx scripts/deploy.ts",
@@ -23,7 +24,8 @@
     "recommend-worker": "tsx scripts/recommend-worker.ts",
     "events": "tsx scripts/events.ts",
     "reputation": "tsx scripts/reputation.ts",
-    "reputation-index": "tsx scripts/reputation-index.ts"
+    "reputation-index": "tsx scripts/reputation-index.ts",
+    "agent-commands": "tsx scripts/agent-commands.ts"
   },
   "dependencies": {
     "ajv": "^8.20.0",

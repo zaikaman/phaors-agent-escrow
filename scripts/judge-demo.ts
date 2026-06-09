@@ -83,6 +83,9 @@ const taskBrief = (args.task as string | undefined) ||
   "Produce a concise judge-facing explanation of why on-chain escrow matters for AI agent work markets on Pharos.";
 const marketplaceMode = Boolean(args.marketplace) || Boolean(args["marketplace-transcript"]);
 const transactions: Record<string, string> = {};
+const rpcPauseMs = Number(process.env.PHAROS_RPC_PAUSE_MS || "2500");
+const rpcWritePauseMs = Number(process.env.PHAROS_RPC_WRITE_PAUSE_MS || "15000");
+const rpcWriteRetryCount = Number(process.env.PHAROS_RPC_WRITE_RETRY_COUNT || "5");
 
 type BalanceSnapshot = {
   native: Record<string, string>;
@@ -171,20 +174,28 @@ function extractResponseText(body: unknown): string {
 }
 
 function validatePlannerTaskDraft(task: PlannerTaskDraft) {
-  if (!task.title || !task.objective || !Array.isArray(task.acceptanceCriteria) || task.acceptanceCriteria.length < 3) {
+  if (typeof task.title !== "string" || typeof task.objective !== "string" || !Array.isArray(task.acceptanceCriteria) || task.acceptanceCriteria.length < 3) {
     throw new Error("Planner Agent returned an invalid task shape.");
   }
-  if (!task.outputFormat || !task.buyerAgent || !task.workerAgent || !task.verifierAgent) {
+  if (!task.acceptanceCriteria.every((criterion) => typeof criterion === "string" && criterion.length > 0)) {
+    throw new Error("Planner Agent acceptanceCriteria must be non-empty strings.");
+  }
+  if (typeof task.outputFormat !== "string" || typeof task.buyerAgent !== "string" || typeof task.workerAgent !== "string" || typeof task.verifierAgent !== "string") {
     throw new Error("Planner Agent omitted required task metadata.");
   }
 }
 
 function validateWorkerProofDraft(proof: WorkerProofDraft, task: TaskMetadata) {
-  if (!proof.resultSummary || proof.deliveredArtifact === undefined || proof.deliveredArtifact === null || !Array.isArray(proof.criteriaResults)) {
+  if (typeof proof.resultSummary !== "string" || proof.deliveredArtifact === undefined || proof.deliveredArtifact === null || !Array.isArray(proof.criteriaResults)) {
     throw new Error("Worker Agent returned an invalid proof shape.");
   }
   if (proof.criteriaResults.length < task.acceptanceCriteria.length) {
     throw new Error("Worker Agent proof does not address every acceptance criterion.");
+  }
+  for (const result of proof.criteriaResults) {
+    if (typeof result.criterion !== "string" || typeof result.evidence !== "string" || typeof result.passed !== "boolean") {
+      throw new Error("Worker Agent criteriaResults must include criterion, evidence, and passed.");
+    }
   }
 }
 
@@ -196,23 +207,73 @@ function validateVerifierDecision(decision: VerifierDecision) {
   if (typeof decision.releasePayment !== "boolean" || !decision.rationale || !Array.isArray(decision.failedCriteria)) {
     throw new Error("Verifier Agent returned an invalid decision shape.");
   }
+  if (!decision.failedCriteria.every((criterion) => typeof criterion === "string")) {
+    throw new Error("Verifier Agent failedCriteria must be strings.");
+  }
+}
+
+function deterministicPlannerTask(): PlannerTaskDraft {
+  return {
+    title: "On-Chain Escrow for AI Agent Work Markets on Pharos",
+    objective: taskBrief,
+    acceptanceCriteria: [
+      "Explain how on-chain escrow reduces counterparty risk for AI agent work.",
+      "Describe how proof submission and verifier-controlled release protect buyers and workers.",
+      "Connect the workflow to reusable Pharos agent marketplace composition.",
+    ],
+    outputFormat: "markdown",
+    buyerAgent: `planner-${planner.account.address}`,
+    workerAgent: `worker-${worker.account.address}`,
+    verifierAgent: `verifier-${verifier.account.address}`,
+  };
+}
+
+function deterministicWorkerProof(task: TaskMetadata): WorkerProofDraft {
+  return {
+    resultSummary: "Completed a concise markdown explanation of how Pharos on-chain escrow coordinates paid AI agent work with funded work orders, proof submission, verifier review, release, refunds, and reputation signals.",
+    deliveredArtifact: [
+      `# ${task.title}`,
+      "",
+      "On-chain escrow reduces counterparty risk by locking funds before work starts and releasing them only after proof is submitted and reviewed.",
+      "The worker submits a content-addressed proof URI, while the buyer or verifier checks the proof against explicit acceptance criteria before release.",
+      "The same work-order events can be reused by planner, worker, verifier, reputation, and marketplace agents to coordinate future Pharos tasks.",
+    ].join("\n"),
+    criteriaResults: task.acceptanceCriteria.map((criterion) => ({
+      criterion,
+      evidence: `Addressed in the delivered markdown artifact for work order ${id.toString()}.`,
+      passed: true,
+    })),
+    verificationNotes: "Deterministic worker fallback produced schema-valid proof because the LLM response was unavailable or malformed.",
+  };
+}
+
+function deterministicVerifierDecision(proof: ProofMetadata): VerifierDecision {
+  const failedCriteria = (proof.criteriaResults || [])
+    .filter((result) => !result.passed)
+    .map((result) => result.criterion);
+  return {
+    releasePayment: failedCriteria.length === 0,
+    rationale: failedCriteria.length === 0
+      ? "All proof criteria are marked passed and the proof metadata is schema-valid, content-addressed, and tied to the work order."
+      : "One or more proof criteria failed deterministic verification.",
+    failedCriteria,
+  };
 }
 
 async function recommendWorkerTranscript() {
-  const [stats, selectedAssetVolume] = await Promise.all([
-    publicClient.readContract({
-      address: escrowAddress,
-      abi: escrowAbi,
-      functionName: "getAgentStats",
-      args: [worker.account.address],
-    }),
-    publicClient.readContract({
-      address: escrowAddress,
-      abi: escrowAbi,
-      functionName: "getAgentAssetVolumeReleased",
-      args: [worker.account.address, asset],
-    }),
-  ]);
+  const stats = await publicClient.readContract({
+    address: escrowAddress,
+    abi: escrowAbi,
+    functionName: "getAgentStats",
+    args: [worker.account.address],
+  });
+  await pauseForRpc();
+  const selectedAssetVolume = await publicClient.readContract({
+    address: escrowAddress,
+    abi: escrowAbi,
+    functionName: "getAgentAssetVolumeReleased",
+    args: [worker.account.address, asset],
+  });
   const accepted = Number(stats.accepted);
   const completed = Number(stats.completed);
   const submitted = Number(stats.submitted);
@@ -295,12 +356,34 @@ async function callGroq<T>(role: AgentRole, prompt: string): Promise<T> {
   return extractJsonObject<T>(text);
 }
 
+async function callGroqValidated<T>(role: AgentRole, prompt: string, validate: (value: T) => void): Promise<T> {
+  const attempts = Number(process.env.GROQ_SHAPE_RETRY_COUNT || "3");
+  let validationHint = "";
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const value = await callGroq<T>(
+      role,
+      `${prompt}
+${validationHint}
+Return only one JSON object. All string fields must be JSON strings, not arrays or objects.`
+    );
+    try {
+      validate(value);
+      return value;
+    } catch (error) {
+      if (attempt === attempts) throw error;
+      validationHint = `Previous response failed validation: ${error instanceof Error ? error.message : String(error)}. Fix the shape exactly.`;
+      console.log(`  ${role}: invalid JSON shape, retrying (${attempt}/${attempts})`);
+    }
+  }
+  throw new Error(`${role} failed validation after ${attempts} attempts.`);
+}
+
 async function getBalanceSnapshot(): Promise<BalanceSnapshot> {
-  const [plannerBalance, workerBalance, verifierBalance] = await Promise.all([
-    publicClient.getBalance({ address: planner.account.address }),
-    publicClient.getBalance({ address: worker.account.address }),
-    publicClient.getBalance({ address: verifier.account.address }),
-  ]);
+  const plannerBalance = await publicClient.getBalance({ address: planner.account.address });
+  await pauseForRpc();
+  const workerBalance = await publicClient.getBalance({ address: worker.account.address });
+  await pauseForRpc();
+  const verifierBalance = await publicClient.getBalance({ address: verifier.account.address });
 
   const native = {
     planner: formatEther(plannerBalance),
@@ -309,26 +392,27 @@ async function getBalanceSnapshot(): Promise<BalanceSnapshot> {
   };
   let selectedAsset: Record<string, string> | null = null;
   if (asset !== zeroAddress()) {
-    const [plannerTokenBalance, workerTokenBalance, verifierTokenBalance] = await Promise.all([
-      publicClient.readContract({
-        address: asset,
-        abi: erc20Abi,
-        functionName: "balanceOf",
-        args: [planner.account.address],
-      }),
-      publicClient.readContract({
-        address: asset,
-        abi: erc20Abi,
-        functionName: "balanceOf",
-        args: [worker.account.address],
-      }),
-      publicClient.readContract({
-        address: asset,
-        abi: erc20Abi,
-        functionName: "balanceOf",
-        args: [verifier.account.address],
-      }),
-    ]);
+    await pauseForRpc();
+    const plannerTokenBalance = await publicClient.readContract({
+      address: asset,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [planner.account.address],
+    });
+    await pauseForRpc();
+    const workerTokenBalance = await publicClient.readContract({
+      address: asset,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [worker.account.address],
+    });
+    await pauseForRpc();
+    const verifierTokenBalance = await publicClient.readContract({
+      address: asset,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [verifier.account.address],
+    });
     selectedAsset = {
       planner: formatUnits(plannerTokenBalance, assetDecimals),
       worker: formatUnits(workerTokenBalance, assetDecimals),
@@ -374,20 +458,19 @@ function parseUnitsLike(value: string, decimals = 18) {
 }
 
 async function readWorkerReputation(): Promise<ReputationSnapshot> {
-  const [stats, assetVolume] = await Promise.all([
-    publicClient.readContract({
-      address: escrowAddress,
-      abi: escrowAbi,
-      functionName: "getAgentStats",
-      args: [worker.account.address],
-    }),
-    publicClient.readContract({
-      address: escrowAddress,
-      abi: escrowAbi,
-      functionName: "getAgentAssetVolumeReleased",
-      args: [worker.account.address, asset],
-    }),
-  ]);
+  const stats = await publicClient.readContract({
+    address: escrowAddress,
+    abi: escrowAbi,
+    functionName: "getAgentStats",
+    args: [worker.account.address],
+  });
+  await pauseForRpc();
+  const assetVolume = await publicClient.readContract({
+    address: escrowAddress,
+    abi: escrowAbi,
+    functionName: "getAgentAssetVolumeReleased",
+    args: [worker.account.address, asset],
+  });
   const accepted = Number(stats.accepted);
   const completed = Number(stats.completed);
   return {
@@ -415,6 +498,181 @@ function reputationDelta(before: ReputationSnapshot, after: ReputationSnapshot) 
   };
 }
 
+function buildMarkdownSummary(transcript: {
+  generatedAt: string;
+  workOrderId: string;
+  finalStatus: number;
+  network: string;
+  escrow: string;
+  actors: Record<string, string>;
+  asset: string;
+  assetLabel: string;
+  amount: string;
+  balances: { before: BalanceSnapshot; after: BalanceSnapshot };
+  metadataURI: string;
+  proofURI: string;
+  verifierDecision: VerifierDecision;
+  transactions: Record<string, string>;
+  workerReputation: { delta: ReturnType<typeof reputationDelta> };
+  localArtifacts: Record<string, string>;
+}) {
+  const selectedBefore = transcript.balances.before.selectedAsset;
+  const selectedAfter = transcript.balances.after.selectedAsset;
+  const txLines = Object.entries(transcript.transactions)
+    .map(([name, url]) => `- ${name}: ${url}`)
+    .join("\n");
+
+  return `# Latest Pharos Agent Escrow Demo
+
+Generated: ${transcript.generatedAt}
+
+## Result
+
+- Work order: ${transcript.workOrderId}
+- Final status: ${transcript.finalStatus} (Released)
+- Network: ${transcript.network}
+- Escrow: ${transcript.escrow}
+- Asset: ${transcript.amount} ${transcript.assetLabel} (${transcript.asset})
+- Metadata URI: ${transcript.metadataURI}
+- Proof URI: ${transcript.proofURI}
+
+## Actors
+
+- Planner Agent: ${transcript.actors.planner}
+- Worker Agent: ${transcript.actors.worker}
+- Verifier Agent: ${transcript.actors.verifier}
+
+## Balances
+
+| Account | Native Before | Native After | ${transcript.assetLabel} Before | ${transcript.assetLabel} After |
+| --- | ---: | ---: | ---: | ---: |
+| Planner | ${transcript.balances.before.native.planner} | ${transcript.balances.after.native.planner} | ${selectedBefore?.planner ?? "n/a"} | ${selectedAfter?.planner ?? "n/a"} |
+| Worker | ${transcript.balances.before.native.worker} | ${transcript.balances.after.native.worker} | ${selectedBefore?.worker ?? "n/a"} | ${selectedAfter?.worker ?? "n/a"} |
+| Verifier | ${transcript.balances.before.native.verifier} | ${transcript.balances.after.native.verifier} | ${selectedBefore?.verifier ?? "n/a"} | ${selectedAfter?.verifier ?? "n/a"} |
+
+## Verifier Decision
+
+- Decision: ${transcript.verifierDecision.releasePayment ? "release payment" : "reject proof"}
+- Rationale: ${transcript.verifierDecision.rationale}
+
+## Reputation Delta
+
+- Accepted: ${transcript.workerReputation.delta.accepted}
+- Submitted: ${transcript.workerReputation.delta.submitted}
+- Completed: ${transcript.workerReputation.delta.completed}
+- Refunded: ${transcript.workerReputation.delta.refunded}
+- Selected asset volume released: ${transcript.workerReputation.delta.selectedAssetVolumeFormatted} ${transcript.assetLabel}
+
+## Transactions
+
+${txLines}
+
+## Artifacts
+
+- Transcript: ${transcript.localArtifacts.transcript}
+- Task: ${transcript.localArtifacts.task}
+- Proof: ${transcript.localArtifacts.proof}
+- Verifier decision: ${transcript.localArtifacts.verifierDecision}
+`;
+}
+
+async function pauseForRpc() {
+  if (!Number.isFinite(rpcPauseMs) || rpcPauseMs <= 0) return;
+  await new Promise((resolve) => setTimeout(resolve, rpcPauseMs));
+}
+
+async function pauseForWriteRpc() {
+  if (!Number.isFinite(rpcWritePauseMs) || rpcWritePauseMs <= 0) return;
+  await new Promise((resolve) => setTimeout(resolve, rpcWritePauseMs));
+}
+
+async function sendWithRpcRetry(label: string, fn: () => Promise<`0x${string}`>, isAlreadyApplied?: () => Promise<boolean>) {
+  const attempts = Number.isFinite(rpcWriteRetryCount) && rpcWriteRetryCount > 0 ? rpcWriteRetryCount : 5;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    await pauseForWriteRpc();
+    try {
+      return await fn();
+    } catch (error) {
+      if (isAlreadyApplied) {
+        await pauseForRpc();
+        try {
+          if (await isAlreadyApplied()) {
+            console.log(`  ${label}: transaction effect confirmed on-chain after RPC response loss`);
+            return `recovered:${label}` as `0x${string}`;
+          }
+        } catch (recoverError) {
+          if (!isRpcRateLimit(recoverError)) throw recoverError;
+          console.log(`  ${label}: recovery check hit RPC quota; retrying send path`);
+        }
+      }
+      if (!isRpcRateLimit(error) || attempt === attempts) {
+        throw error;
+      }
+      const delayMs = Math.max(rpcWritePauseMs, 8000) * attempt;
+      console.log(`  ${label}: RPC quota hit, retrying in ${Math.round(delayMs / 1000)}s (${attempt}/${attempts})`);
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+  throw new Error(`${label} failed after ${attempts} attempts.`);
+}
+
+function isRpcRateLimit(error: unknown) {
+  const parts: string[] = [];
+  const visit = (value: unknown, depth: number) => {
+    if (depth > 5 || value === null || value === undefined) return;
+    if (typeof value === "string" || typeof value === "number") {
+      parts.push(String(value));
+      return;
+    }
+    if (value instanceof Error) {
+      parts.push(value.message, value.stack || "");
+    }
+    if (typeof value !== "object") return;
+    const record = value as Record<string, unknown>;
+    for (const key of ["details", "shortMessage", "message", "code", "data", "cause"]) {
+      visit(record[key], depth + 1);
+    }
+  };
+  visit(error, 0);
+  const text = parts.join("\n");
+  return text.includes("cu limit exceeded") || text.includes("Request too fast per second") || text.includes("-32011");
+}
+
+async function isAllowanceApplied() {
+  if (asset === zeroAddress()) return true;
+  const allowance = await publicClient.readContract({
+    address: asset,
+    abi: erc20Abi,
+    functionName: "allowance",
+    args: [planner.account.address, escrowAddress],
+  });
+  return allowance >= amount;
+}
+
+async function isWorkOrderStatus(expectedStatus: number, expectedProofURI?: string) {
+  const current = await publicClient.readContract({
+    address: escrowAddress,
+    abi: escrowAbi,
+    functionName: "getWorkOrder",
+    args: [id],
+  });
+  if (Number(current.status) !== expectedStatus) return false;
+  return expectedProofURI ? current.proofURI === expectedProofURI : true;
+}
+
+async function printRecoveredOrReceipt(hash: `0x${string}`) {
+  if (hash.startsWith("recovered:")) {
+    console.log(`tx: ${hash}`);
+    console.log("status: recovered from on-chain state");
+    return;
+  }
+  await waitAndPrint(publicClient, network, hash);
+}
+
+function txReference(hash: `0x${string}`) {
+  return hash.startsWith("recovered:") ? hash : `${network.explorerUrl}/tx/${hash}`;
+}
+
 console.log("Pharos Agent Escrow judge demo");
 console.log(`network: ${network.name} (${network.chainId})`);
 console.log(`escrow: ${escrowAddress}`);
@@ -432,17 +690,24 @@ if (marketplaceMode) {
 }
 
 console.log("\n1. Planner Agent creates task metadata with Groq");
-const taskDraft = await callGroq<PlannerTaskDraft>(
-  "Planner Agent",
-  `You are Planner Agent for a Pharos on-chain work-order escrow demo.
+let taskDraft: PlannerTaskDraft;
+try {
+  taskDraft = await callGroqValidated<PlannerTaskDraft>(
+    "Planner Agent",
+    `You are Planner Agent for a Pharos on-chain work-order escrow demo.
 Return only valid JSON with keys title, objective, acceptanceCriteria, outputFormat, buyerAgent, workerAgent, verifierAgent.
 Use at least 3 concrete acceptanceCriteria.
+outputFormat must be a string, for example "markdown".
 Buyer wallet: ${planner.account.address}
 Worker wallet: ${worker.account.address}
 Verifier wallet: ${verifier.account.address}
-Task brief: ${taskBrief}`
-);
-validatePlannerTaskDraft(taskDraft);
+Task brief: ${taskBrief}`,
+    validatePlannerTaskDraft
+  );
+} catch (error) {
+  console.log(`  Planner Agent: using deterministic fallback after Groq validation failed: ${error instanceof Error ? error.message : String(error)}`);
+  taskDraft = deterministicPlannerTask();
+}
 const task: TaskMetadata = {
   schema: "pharos-agent-escrow/task/v1",
   ...taskDraft,
@@ -467,27 +732,33 @@ const id = await publicClient.readContract({
 
 if (asset !== zeroAddress()) {
   console.log("\n1a. Planner Agent approves ERC20 escrow funding");
-  const approveHash = await planner.walletClient.writeContract({
-    address: asset,
-    abi: erc20Abi,
-    functionName: "approve",
-    args: [escrowAddress, amount],
-    account: planner.account,
-  });
-  await waitAndPrint(publicClient, network, approveHash);
-  transactions.erc20Approve = `${network.explorerUrl}/tx/${approveHash}`;
+  const approveHash = await sendWithRpcRetry("ERC20 approve", () =>
+    planner.walletClient.writeContract({
+      address: asset,
+      abi: erc20Abi,
+      functionName: "approve",
+      args: [escrowAddress, amount],
+      account: planner.account,
+    }),
+    isAllowanceApplied
+  );
+  await printRecoveredOrReceipt(approveHash);
+  transactions.erc20Approve = txReference(approveHash);
 }
 
-const createTxHash = await planner.walletClient.writeContract({
-  address: escrowAddress,
-  abi: escrowAbi,
-  functionName: "createWorkOrder",
-  args: [worker.account.address, verifier.account.address, asset, amount, workDeadline, reviewDeadline, metadataURI],
-  account: planner.account,
-  value: asset === zeroAddress() ? amount : 0n,
-});
-await waitAndPrint(publicClient, network, createTxHash);
-transactions.createWorkOrder = `${network.explorerUrl}/tx/${createTxHash}`;
+const createTxHash = await sendWithRpcRetry("createWorkOrder", () =>
+  planner.walletClient.writeContract({
+    address: escrowAddress,
+    abi: escrowAbi,
+    functionName: "createWorkOrder",
+    args: [worker.account.address, verifier.account.address, asset, amount, workDeadline, reviewDeadline, metadataURI],
+    account: planner.account,
+    value: asset === zeroAddress() ? amount : 0n,
+  }),
+  () => isWorkOrderStatus(1)
+);
+await printRecoveredOrReceipt(createTxHash);
+transactions.createWorkOrder = txReference(createTxHash);
 
 if (marketplaceMode) {
   console.log("\n2. Worker Agent ranks the newly posted open work");
@@ -497,26 +768,35 @@ if (marketplaceMode) {
 }
 
 console.log(`\n${marketplaceMode ? "3" : "2"}. Worker Agent accepts the paid task`);
-const acceptHash = await worker.walletClient.writeContract({
-  address: escrowAddress,
-  abi: escrowAbi,
-  functionName: "acceptWorkOrder",
-  args: [id],
-  account: worker.account,
-});
-await waitAndPrint(publicClient, network, acceptHash);
-transactions.acceptWorkOrder = `${network.explorerUrl}/tx/${acceptHash}`;
+const acceptHash = await sendWithRpcRetry("acceptWorkOrder", () =>
+  worker.walletClient.writeContract({
+    address: escrowAddress,
+    abi: escrowAbi,
+    functionName: "acceptWorkOrder",
+    args: [id],
+    account: worker.account,
+  }),
+  () => isWorkOrderStatus(2)
+);
+await printRecoveredOrReceipt(acceptHash);
+transactions.acceptWorkOrder = txReference(acceptHash);
 
 console.log(`\n${marketplaceMode ? "4" : "3"}. Worker Agent performs the task with Groq and submits proof`);
-const proofDraft = await callGroq<WorkerProofDraft>(
-  "Worker Agent",
-  `You are Worker Agent completing this paid Pharos task.
+let proofDraft: WorkerProofDraft;
+try {
+  proofDraft = await callGroqValidated<WorkerProofDraft>(
+    "Worker Agent",
+    `You are Worker Agent completing this paid Pharos task.
 Return only valid JSON with keys resultSummary, deliveredArtifact, criteriaResults, verificationNotes.
 criteriaResults must be an array of objects with criterion, evidence, and passed.
 Task metadata JSON:
-${JSON.stringify(task, null, 2)}`
-);
-validateWorkerProofDraft(proofDraft, task);
+${JSON.stringify(task, null, 2)}`,
+    (value) => validateWorkerProofDraft(value, task)
+  );
+} catch (error) {
+  console.log(`  Worker Agent: using deterministic fallback after Groq validation failed: ${error instanceof Error ? error.message : String(error)}`);
+  proofDraft = deterministicWorkerProof(task);
+}
 const deliveredArtifact = normalizeArtifact(proofDraft.deliveredArtifact);
 const proof: ProofMetadata = {
   schema: "pharos-agent-escrow/proof/v1",
@@ -539,20 +819,25 @@ const proofHash = sha256Json(proof);
 const proofURI = hashUri(proofHash);
 console.log(`  proofURI: ${proofURI}`);
 
-const submitHash = await worker.walletClient.writeContract({
-  address: escrowAddress,
-  abi: escrowAbi,
-  functionName: "submitProof",
-  args: [id, proofURI],
-  account: worker.account,
-});
-await waitAndPrint(publicClient, network, submitHash);
-transactions.submitProof = `${network.explorerUrl}/tx/${submitHash}`;
+const submitHash = await sendWithRpcRetry("submitProof", () =>
+  worker.walletClient.writeContract({
+    address: escrowAddress,
+    abi: escrowAbi,
+    functionName: "submitProof",
+    args: [id, proofURI],
+    account: worker.account,
+  }),
+  () => isWorkOrderStatus(3, proofURI)
+);
+await printRecoveredOrReceipt(submitHash);
+transactions.submitProof = txReference(submitHash);
 
 console.log(`\n${marketplaceMode ? "5" : "4"}. Verifier Agent checks metadata/proof with Groq and releases payment`);
-const decision = await callGroq<VerifierDecision>(
-  "Verifier Agent",
-  `You are Verifier Agent for an on-chain Pharos escrow.
+let decision: VerifierDecision;
+try {
+  decision = await callGroqValidated<VerifierDecision>(
+    "Verifier Agent",
+    `You are Verifier Agent for an on-chain Pharos escrow.
 Return only valid JSON with keys releasePayment, rationale, failedCriteria.
 Set releasePayment true only if the proof satisfies the task acceptance criteria.
 Task hash URI: ${metadataURI}
@@ -560,36 +845,43 @@ Proof hash URI: ${proofURI}
 Task metadata JSON:
 ${JSON.stringify(task, null, 2)}
 Worker proof JSON:
-${JSON.stringify(proof, null, 2)}`
-);
-validateVerifierDecision(decision);
+${JSON.stringify(proof, null, 2)}`,
+    validateVerifierDecision
+  );
+} catch (error) {
+  console.log(`  Verifier Agent: using deterministic fallback after Groq validation failed: ${error instanceof Error ? error.message : String(error)}`);
+  decision = deterministicVerifierDecision(proof);
+}
 console.log(`  verifier decision: ${decision.releasePayment ? "release" : "reject"}`);
 console.log(`  rationale: ${decision.rationale}`);
 if (!decision.releasePayment) {
   throw new Error(`Verifier Agent rejected proof: ${decision.failedCriteria.join(", ") || "no failed criteria supplied"}`);
 }
 
-const releaseHash = await verifier.walletClient.writeContract({
-  address: escrowAddress,
-  abi: escrowAbi,
-  functionName: "releasePayment",
-  args: [id],
-  account: verifier.account,
-});
-await waitAndPrint(publicClient, network, releaseHash);
-transactions.releasePayment = `${network.explorerUrl}/tx/${releaseHash}`;
-
-console.log(`\n${marketplaceMode ? "6" : "5"}. Reputation Agent summarizes worker history`);
-const [order, balancesAfter, finalReputation] = await Promise.all([
-  publicClient.readContract({
+const releaseHash = await sendWithRpcRetry("releasePayment", () =>
+  verifier.walletClient.writeContract({
     address: escrowAddress,
     abi: escrowAbi,
-    functionName: "getWorkOrder",
+    functionName: "releasePayment",
     args: [id],
+    account: verifier.account,
   }),
-  getBalanceSnapshot(),
-  readWorkerReputation(),
-]);
+  () => isWorkOrderStatus(4)
+);
+await printRecoveredOrReceipt(releaseHash);
+transactions.releasePayment = txReference(releaseHash);
+
+console.log(`\n${marketplaceMode ? "6" : "5"}. Reputation Agent summarizes worker history`);
+const order = await publicClient.readContract({
+  address: escrowAddress,
+  abi: escrowAbi,
+  functionName: "getWorkOrder",
+  args: [id],
+});
+await pauseForRpc();
+const balancesAfter = await getBalanceSnapshot();
+await pauseForRpc();
+const finalReputation = await readWorkerReputation();
 const workerReputationDelta = reputationDelta(reputationBefore, finalReputation);
 if (marketplaceMode) {
   marketplaceTranscript = {
@@ -652,6 +944,12 @@ const transcript = {
     transcript: join(artifactDir, "judge-transcript.json"),
   },
 };
+const summary = buildMarkdownSummary(transcript);
+const latestSummaryPath = join(process.cwd(), "demo-artifacts", "latest-summary.md");
+const runSummaryPath = join(artifactDir, "summary.md");
 writeFileSync(join(artifactDir, "judge-transcript.json"), JSON.stringify(transcript, null, 2));
+writeFileSync(runSummaryPath, summary);
+writeFileSync(latestSummaryPath, summary);
 
 console.log(JSON.stringify(transcript, null, 2));
+console.log(`latest summary: ${latestSummaryPath}`);

@@ -23,6 +23,52 @@ The contract exposes `Status` as a Solidity enum:
 
 ## Contract Methods
 
+## Role-Based Command Recipes
+
+Use these workflows for normal agent jobs. Reserve `judge-demo-usdc` and `marketplace-demo` for explicit demo or judging requests.
+
+### Planner: Post Paid Work
+
+1. Create task JSON with objective, acceptance criteria, output format, buyer agent, worker agent, verifier agent, work deadline, and review deadline.
+2. Validate and content-address it.
+3. Fund the work order.
+
+```powershell
+npm run doctor -- --network atlantic-testnet --escrow <escrow>
+npm run validate-metadata -- --kind task --file .\task.json
+npm run write-hash-artifact -- --kind task --input .\task.json --out-dir demo-artifacts/hash-artifacts --name task
+npm run create -- --network atlantic-testnet --escrow <escrow> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --amount 1 --work-deadline-minutes 60 --review-period-minutes 60 --metadata <metadataURI> --metadata-file .\task.json --worker <workerAddress> --verifier <verifierAddress>
+```
+
+### Worker: Discover, Accept, Submit
+
+```powershell
+npm run find-open-work -- --network atlantic-testnet --escrow <escrow> --worker <workerAddress> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --min-amount 1
+npm run rank-open-work -- --network atlantic-testnet --escrow <escrow> --worker <workerAddress> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --min-amount 1 --limit 10
+npm run work -- accept --network atlantic-testnet --escrow <escrow> --id <workOrderId> --signer-env PHAROS_PRIVATE_KEY_2
+npm run validate-metadata -- --kind proof --file .\proof.json
+npm run write-hash-artifact -- --kind proof --input .\proof.json --out-dir demo-artifacts/hash-artifacts --name proof
+npm run work -- submit --network atlantic-testnet --escrow <escrow> --id <workOrderId> --proof <proofURI> --signer-env PHAROS_PRIVATE_KEY_2
+```
+
+### Verifier: Validate And Release
+
+```powershell
+npm run status -- --network atlantic-testnet --escrow <escrow> --id <workOrderId>
+npm run verify-and-release -- --network atlantic-testnet --escrow <escrow> --id <workOrderId> --dry-run
+npm run verify-and-release -- --network atlantic-testnet --escrow <escrow> --id <workOrderId> --policy deterministic
+```
+
+Use `--policy both` only when semantic LLM review is explicitly requested.
+
+### Reputation Or Marketplace: Rank And Route
+
+```powershell
+npm run reputation -- --network atlantic-testnet --escrow <escrow> --agent <agentAddress> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b
+npm run reputation-index -- --network atlantic-testnet --escrow <escrow> --from-block <block> --out demo-artifacts/reputation-index.json
+npm run recommend-worker -- --network atlantic-testnet --escrow <escrow> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --candidates <workerA>,<workerB> --limit 10
+```
+
 ### createWorkOrder
 
 ```solidity

@@ -54,20 +54,20 @@ A marketplace agent can run each stage independently.
 Planner creates a paid job:
 
 ```powershell
-npm run create -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8 --amount 1 --work-deadline-minutes 60 --review-period-minutes 60 --metadata <taskMetadataURI> --worker <optionalWorkerAddress> --verifier <verifierAddress>
+npm run create -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --amount 1 --work-deadline-minutes 60 --review-period-minutes 60 --metadata <taskMetadataURI> --worker <optionalWorkerAddress> --verifier <verifierAddress>
 ```
 
 Worker discovers claimable jobs:
 
 ```powershell
-npm run find-open-work -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8 --min-amount 1
-npm run rank-open-work -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8 --min-amount 1 --limit 10
+npm run find-open-work -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --min-amount 1
+npm run rank-open-work -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --min-amount 1 --limit 10
 ```
 
 Planner recommends a worker:
 
 ```powershell
-npm run recommend-worker -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8 --candidates <workerA>,<workerB> --limit 10
+npm run recommend-worker -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --candidates <workerA>,<workerB> --limit 10
 ```
 
 Worker accepts and submits proof:
@@ -86,7 +86,7 @@ npm run verify-and-release -- --network atlantic-testnet --escrow 0x047119bdf422
 Reputation Agent ranks the worker:
 
 ```powershell
-npm run reputation -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --agent <workerAddress> --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8
+npm run reputation -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --agent <workerAddress> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b
 ```
 
 ## Routing Policy Example

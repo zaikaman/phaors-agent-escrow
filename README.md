@@ -8,6 +8,14 @@ Reusable Pharos Skill for agent-to-agent work orders. A planner agent escrows na
 
 Pharos needs this because agent economies require more than direct transfers. Agents need a shared way to price work, lock funds, verify completion, refund expired jobs, discover open opportunities, and build event-based reputation that future marketplace agents can reuse.
 
+One-command submission gate:
+
+```powershell
+npm run submit-check -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
+```
+
+This runs build, tests, TypeScript typecheck, task/proof metadata validation, skill validation, and judge-mode `doctor`.
+
 One-command preflight for the judge-grade demo:
 
 ```powershell
@@ -21,6 +29,18 @@ One-command live demo:
 ```powershell
 npm run judge-demo-usdc -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
 ```
+
+For reusable agent work, prefer role-specific commands over the all-in-one demo:
+
+| Role | Use when | Commands |
+| --- | --- | --- |
+| Planner | Create and fund a task | `write-hash-artifact`, `create`, `recommend-worker` |
+| Worker | Find, accept, or submit work | `find-open-work`, `rank-open-work`, `work -- accept`, `work -- submit` |
+| Verifier | Validate proof and release | `verify-and-release --dry-run`, `verify-and-release` |
+| Reputation | Read history and stats | `status`, `events`, `reputation`, `reputation-index` |
+| Marketplace | Route jobs or workers | `rank-open-work`, `recommend-worker`, `reputation-index` |
+
+Use `judge-demo-usdc` only for judge walkthroughs, live demos, or submission proof.
 
 Live Pharos Atlantic proof:
 
@@ -50,13 +70,7 @@ npm ci
 Run local production checks:
 
 ```powershell
-npm run build
-npm test
-npx tsc --noEmit
-npm run doctor -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --mode one-wallet --no-groq
-npm run validate-metadata -- --kind task --file .\assets\templates\task.metadata.json
-npm run validate-metadata -- --kind proof --file .\assets\templates\proof.metadata.json
-python C:\Users\admin\.codex\skills\.system\skill-creator\scripts\quick_validate.py .
+npm run submit-check -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
 ```
 
 Verify the live split-deadline Atlantic deployment:
@@ -77,7 +91,7 @@ Run the judge-grade three-agent USDC Groq demo:
 npm run judge-demo-usdc -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
 ```
 
-The demo writes a clean transcript to `demo-artifacts/<workOrderId>/judge-transcript.json`, including actors, balances before/after, transaction links, verifier decision, hashes, local artifact paths, and worker reputation delta.
+The demo writes a clean transcript to `demo-artifacts/<workOrderId>/judge-transcript.json`, including actors, balances before/after, transaction links, verifier decision, hashes, local artifact paths, and worker reputation delta. It also writes `demo-artifacts/latest-summary.md` for a concise judge-readable recap.
 
 Run the Phase 2 mini marketplace composition demo:
 
@@ -111,6 +125,7 @@ Reusable surfaces:
 - Event and contract-read based reputation summaries
 - Persistent event-backed reputation index in `scripts/reputation-index.ts`
 - Structured agent capability manifest in `assets/agent-capabilities.manifest.json`
+- JSON-RPC-style agent command manifest in `assets/agent-command.manifest.json`, printable with `npm run agent-commands`
 - Content-addressed task/proof artifact writer in `scripts/write-hash-artifact.ts`
 - Live Atlantic deployment with explorer links
 
@@ -203,19 +218,19 @@ The marketplace demo prints worker recommendation, ranked work, on-chain lifecyc
 Find claimable work:
 
 ```powershell
-npm run find-open-work -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8 --min-amount 1
+npm run find-open-work -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --min-amount 1
 ```
 
 Rank open work for a worker agent:
 
 ```powershell
-npm run rank-open-work -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8 --min-amount 1 --limit 10
+npm run rank-open-work -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --min-amount 1 --limit 10
 ```
 
 Recommend workers for a planner or marketplace agent:
 
 ```powershell
-npm run recommend-worker -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8 --candidates <workerA>,<workerB> --limit 10
+npm run recommend-worker -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --candidates <workerA>,<workerB> --limit 10
 ```
 
 Build a persistent event-backed reputation index:
@@ -257,7 +272,7 @@ Inspect events and worker reputation:
 
 ```powershell
 npm run events -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
-npm run reputation -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --agent <agentAddress> --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8
+npm run reputation -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --agent <agentAddress> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b
 ```
 
 ## Why We Built It This Way

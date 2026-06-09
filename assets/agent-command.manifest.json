@@ -1,0 +1,166 @@
+{
+  "schema": "pharos-agent-escrow/agent-command-manifest/v1",
+  "skill": "pharos-agent-escrow",
+  "capabilityManifest": "assets/agent-capabilities.manifest.json",
+  "transport": {
+    "type": "local-command",
+    "cwd": ".",
+    "argumentStyle": "npm run <script> -- --key value"
+  },
+  "defaults": {
+    "network": "atlantic-testnet",
+    "escrow": "0x047119bdf422fc82021b88cf679ddeddd500f128",
+    "nativeAsset": "native",
+    "usdcAsset": "0xcfc8330f4bcab529c625d12781b1c19466a9fc8b"
+  },
+  "selectionPolicy": {
+    "defaultBehavior": "Choose the smallest role-specific method that satisfies the user's request.",
+    "doNotDefaultToDemo": true,
+    "demoMethods": ["pharos.runJudgeDemoUsdc"],
+    "roleOrder": ["planner-agent", "worker-agent", "verifier-agent", "reputation-agent", "marketplace-agent", "judge"]
+  },
+  "methods": [
+    {
+      "method": "pharos.submitCheck",
+      "role": "judge",
+      "description": "Run the complete Phase 1 submission gate: build, tests, typecheck, metadata validation, skill validation, and judge-mode doctor.",
+      "command": "npm run submit-check -- --network ${network} --escrow ${escrow}",
+      "requiredEnv": ["PHAROS_PRIVATE_KEY", "PHAROS_PRIVATE_KEY_2", "PHAROS_PRIVATE_KEY_3", "GROQ_API_KEY"],
+      "params": [
+        { "name": "network", "type": "string", "required": false, "default": "atlantic-testnet" },
+        { "name": "escrow", "type": "address", "required": false, "default": "0x047119bdf422fc82021b88cf679ddeddd500f128" }
+      ]
+    },
+    {
+      "method": "pharos.runJudgeDemoUsdc",
+      "role": "judge",
+      "demoOnly": true,
+      "description": "Run the full three-wallet USDC judge demo with Groq planner, worker, verifier, on-chain release, transcript, and latest markdown summary.",
+      "command": "npm run judge-demo-usdc -- --network ${network} --escrow ${escrow}",
+      "requiredEnv": ["PHAROS_PRIVATE_KEY", "PHAROS_PRIVATE_KEY_2", "PHAROS_PRIVATE_KEY_3", "GROQ_API_KEY"],
+      "outputs": ["demo-artifacts/<workOrderId>/judge-transcript.json", "demo-artifacts/latest-summary.md"],
+      "params": [
+        { "name": "network", "type": "string", "required": false, "default": "atlantic-testnet" },
+        { "name": "escrow", "type": "address", "required": false, "default": "0x047119bdf422fc82021b88cf679ddeddd500f128" }
+      ]
+    },
+    {
+      "method": "pharos.doctor",
+      "role": "planner-agent",
+      "description": "Verify RPC, deployed escrow bytecode, wallet gas, USDC balance, Groq configuration, and metadata templates.",
+      "command": "npm run doctor -- --network ${network} --escrow ${escrow}",
+      "params": [
+        { "name": "network", "type": "string", "required": false, "default": "atlantic-testnet" },
+        { "name": "escrow", "type": "address", "required": true }
+      ]
+    },
+    {
+      "method": "pharos.createWorkOrder",
+      "role": "planner-agent",
+      "description": "Create and fund a native or ERC20 work order with metadata, worker, verifier, work deadline, and review deadline.",
+      "command": "npm run create -- --network ${network} --escrow ${escrow} --asset ${asset} --amount ${amount} --work-deadline-minutes ${workDeadlineMinutes} --review-period-minutes ${reviewPeriodMinutes} --metadata ${metadataURI}",
+      "params": [
+        { "name": "escrow", "type": "address", "required": true },
+        { "name": "asset", "type": "string", "required": true },
+        { "name": "amount", "type": "decimal-string", "required": true },
+        { "name": "metadataURI", "type": "uri", "required": true },
+        { "name": "workDeadlineMinutes", "type": "number", "required": false, "default": 60 },
+        { "name": "reviewPeriodMinutes", "type": "number", "required": false, "default": 60 },
+        { "name": "worker", "type": "address", "required": false },
+        { "name": "verifier", "type": "address", "required": false }
+      ]
+    },
+    {
+      "method": "pharos.findOpenWork",
+      "role": "worker-agent",
+      "description": "Scan WorkOrderCreated events, filter claimable open jobs, and print accept commands.",
+      "command": "npm run find-open-work -- --network ${network} --escrow ${escrow} --worker ${worker} --asset ${asset} --min-amount ${minAmount}",
+      "params": [
+        { "name": "escrow", "type": "address", "required": true },
+        { "name": "worker", "type": "address", "required": false },
+        { "name": "asset", "type": "string", "required": false },
+        { "name": "minAmount", "type": "decimal-string", "required": false }
+      ]
+    },
+    {
+      "method": "pharos.rankOpenWork",
+      "role": "worker-agent",
+      "description": "Return prioritized open work using reward, urgency, verifier, metadata evidence, and worker eligibility signals.",
+      "command": "npm run rank-open-work -- --network ${network} --escrow ${escrow} --worker ${worker} --asset ${asset} --min-amount ${minAmount} --limit ${limit}",
+      "params": [
+        { "name": "escrow", "type": "address", "required": true },
+        { "name": "worker", "type": "address", "required": false },
+        { "name": "asset", "type": "string", "required": false },
+        { "name": "minAmount", "type": "decimal-string", "required": false },
+        { "name": "limit", "type": "number", "required": false, "default": 10 }
+      ]
+    },
+    {
+      "method": "pharos.acceptWorkOrder",
+      "role": "worker-agent",
+      "description": "Accept an open or designated work order.",
+      "command": "npm run work -- accept --network ${network} --escrow ${escrow} --id ${id}",
+      "params": [
+        { "name": "escrow", "type": "address", "required": true },
+        { "name": "id", "type": "uint256", "required": true }
+      ]
+    },
+    {
+      "method": "pharos.submitProof",
+      "role": "worker-agent",
+      "description": "Submit a proof URI for an accepted work order.",
+      "command": "npm run work -- submit --network ${network} --escrow ${escrow} --id ${id} --proof ${proofURI}",
+      "params": [
+        { "name": "escrow", "type": "address", "required": true },
+        { "name": "id", "type": "uint256", "required": true },
+        { "name": "proofURI", "type": "uri", "required": true }
+      ]
+    },
+    {
+      "method": "pharos.verifyAndRelease",
+      "role": "verifier-agent",
+      "description": "Load task/proof metadata, validate schemas and policy, then release payment only if verification passes.",
+      "command": "npm run verify-and-release -- --network ${network} --escrow ${escrow} --id ${id} --policy ${policy}",
+      "params": [
+        { "name": "escrow", "type": "address", "required": true },
+        { "name": "id", "type": "uint256", "required": true },
+        { "name": "policy", "type": "enum", "required": false, "default": "deterministic", "values": ["deterministic", "groq", "both"] },
+        { "name": "dryRun", "type": "boolean", "required": false, "flag": "--dry-run" }
+      ]
+    },
+    {
+      "method": "pharos.recommendWorker",
+      "role": "marketplace-agent",
+      "description": "Score candidate workers by completion, submission, refund, selected-asset volume, and recency signals.",
+      "command": "npm run recommend-worker -- --network ${network} --escrow ${escrow} --asset ${asset} --candidates ${candidates} --limit ${limit}",
+      "params": [
+        { "name": "escrow", "type": "address", "required": true },
+        { "name": "asset", "type": "string", "required": false },
+        { "name": "candidates", "type": "csv-addresses", "required": true },
+        { "name": "limit", "type": "number", "required": false, "default": 10 }
+      ]
+    },
+    {
+      "method": "pharos.reputation",
+      "role": "reputation-agent",
+      "description": "Read contract stats and selected-asset released volume for one agent.",
+      "command": "npm run reputation -- --network ${network} --escrow ${escrow} --agent ${agent} --asset ${asset}",
+      "params": [
+        { "name": "escrow", "type": "address", "required": true },
+        { "name": "agent", "type": "address", "required": true },
+        { "name": "asset", "type": "string", "required": false }
+      ]
+    },
+    {
+      "method": "pharos.reputationIndex",
+      "role": "reputation-agent",
+      "description": "Build a persistent JSON reputation index from escrow events.",
+      "command": "npm run reputation-index -- --network ${network} --escrow ${escrow} --from-block ${fromBlock} --out ${out}",
+      "params": [
+        { "name": "escrow", "type": "address", "required": true },
+        { "name": "fromBlock", "type": "uint64", "required": true },
+        { "name": "out", "type": "path", "required": false, "default": "demo-artifacts/reputation-index.json" }
+      ]
+    }
+  ]
+}

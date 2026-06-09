@@ -10,6 +10,9 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
+const rpcRetryCount = Number(process.env.PHAROS_RPC_RETRY_COUNT || "12");
+const rpcRetryDelayMs = Number(process.env.PHAROS_RPC_RETRY_DELAY_MS || "2500");
+
 export const networks = {
   "atlantic-testnet": {
     name: "atlantic-testnet",
@@ -17,7 +20,7 @@ export const networks = {
     rpcUrl: "https://atlantic.dplabs-internal.com",
     explorerUrl: "https://atlantic.pharosscan.xyz",
     nativeToken: "PHRS",
-    usdcAddress: "0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8",
+    usdcAddress: "0xcfc8330f4bcab529c625d12781b1c19466a9fc8b",
   },
   mainnet: {
     name: "mainnet",
@@ -233,6 +236,16 @@ export const erc20Abi = [
   },
   {
     type: "function",
+    name: "allowance",
+    stateMutability: "view",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    type: "function",
     name: "decimals",
     stateMutability: "view",
     inputs: [],
@@ -282,7 +295,7 @@ export function makeClients(args: Record<string, string | boolean>) {
     nativeCurrency: { name: network.nativeToken, symbol: network.nativeToken, decimals: 18 },
     rpcUrls: { default: { http: [network.rpcUrl] } },
   };
-  const publicClient = createPublicClient({ chain, transport: http(network.rpcUrl) });
+  const publicClient = createPublicClient({ chain, transport: makeHttpTransport(network.rpcUrl) });
 
   const rawPrivateKey = process.env.PRIVATE_KEY || process.env.PHAROS_PRIVATE_KEY;
   const privateKey = rawPrivateKey?.startsWith("0x") ? rawPrivateKey : `0x${rawPrivateKey || ""}`;
@@ -291,7 +304,7 @@ export function makeClients(args: Record<string, string | boolean>) {
   }
 
   const account = privateKeyToAccount(privateKey as `0x${string}`);
-  const walletClient = createWalletClient({ account, chain, transport: http(network.rpcUrl) });
+  const walletClient = createWalletClient({ account, chain, transport: makeHttpTransport(network.rpcUrl) });
   return { account, chain, network, publicClient, walletClient };
 }
 
@@ -303,7 +316,7 @@ export function makeClientsFromPrivateKey(args: Record<string, string | boolean>
     nativeCurrency: { name: network.nativeToken, symbol: network.nativeToken, decimals: 18 },
     rpcUrls: { default: { http: [network.rpcUrl] } },
   };
-  const publicClient = createPublicClient({ chain, transport: http(network.rpcUrl) });
+  const publicClient = createPublicClient({ chain, transport: makeHttpTransport(network.rpcUrl) });
 
   const rawPrivateKey = process.env[privateKeyEnvName];
   const privateKey = rawPrivateKey?.startsWith("0x") ? rawPrivateKey : `0x${rawPrivateKey || ""}`;
@@ -312,7 +325,7 @@ export function makeClientsFromPrivateKey(args: Record<string, string | boolean>
   }
 
   const account = privateKeyToAccount(privateKey as `0x${string}`);
-  const walletClient = createWalletClient({ account, chain, transport: http(network.rpcUrl) });
+  const walletClient = createWalletClient({ account, chain, transport: makeHttpTransport(network.rpcUrl) });
   return { account, chain, network, publicClient, walletClient };
 }
 
@@ -324,8 +337,15 @@ export function makeReadClient(args: Record<string, string | boolean>) {
     nativeCurrency: { name: network.nativeToken, symbol: network.nativeToken, decimals: 18 },
     rpcUrls: { default: { http: [network.rpcUrl] } },
   };
-  const publicClient = createPublicClient({ chain, transport: http(network.rpcUrl) });
+  const publicClient = createPublicClient({ chain, transport: makeHttpTransport(network.rpcUrl) });
   return { chain, network, publicClient };
+}
+
+function makeHttpTransport(rpcUrl: string) {
+  return http(rpcUrl, {
+    retryCount: Number.isFinite(rpcRetryCount) ? rpcRetryCount : 8,
+    retryDelay: Number.isFinite(rpcRetryDelayMs) ? rpcRetryDelayMs : 1500,
+  });
 }
 
 export async function waitAndPrint(publicClient: ReturnType<typeof createPublicClient>, network: typeof networks[NetworkName], hash: `0x${string}`) {
