@@ -67,6 +67,8 @@ Reusable surfaces:
 - Marketplace agents that route tasks to the best available workers
 - Research, data collection, content bounty, review, and service marketplace agents
 
+See `agents/planner-worker-verifier-demo.md` for a polished Phase 2 mini-agent composition.
+
 ## Live Deployment Proof
 
 - Contract: `0x6f88b3c79325472f6439426e84c9303506661585`
@@ -133,3 +135,4 @@ Judging alignment:
 - Metadata templates: `assets/templates/`
 - Scripts: `scripts/`
 - Tests: `test/AgentWorkOrderEscrow.t.sol`
+- Phase 2 mini-agent example: `agents/planner-worker-verifier-demo.md`

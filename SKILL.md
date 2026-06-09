@@ -18,6 +18,7 @@ Reusable Pharos Skill for agent-to-agent work orders. Use this when an agent nee
 - Need a judge demo or live walkthrough: read `references/demo.md`.
 - Need security posture, production caveats, or validation gates: read `references/security.md`.
 - Need Phase 2 composition ideas: read `references/agent-patterns.md`.
+- Need a polished Phase 2 marketplace-style mini-agent runbook: read `agents/planner-worker-verifier-demo.md`.
 
 ## Core Contract
 
