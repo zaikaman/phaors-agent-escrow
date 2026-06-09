@@ -8,7 +8,7 @@ Creates work orders for tasks it should not execute itself. It writes metadata w
 
 ## Worker Agent
 
-Scans `WorkOrderCreated` events, filters by supported task type and reward, accepts suitable work, produces the artifact, and submits proof.
+Scans `WorkOrderCreated` events with `scripts/find-open-work.ts`, filters by supported task type and reward, accepts suitable work, produces the artifact, and submits proof.
 
 ## Verifier Agent
 

@@ -52,6 +52,11 @@ function acceptWorkOrder(uint256 id) external
 - Only works while status is `Open`.
 - If a worker was designated, only that worker can accept.
 - If no worker was designated, caller becomes the worker.
+- Worker agents can discover claimable jobs with `scripts/find-open-work.ts`.
+
+```powershell
+npx tsx scripts/find-open-work.ts --network atlantic-testnet --escrow <address> --worker <workerAddress> --asset native --min-amount 0.001
+```
 
 ### submitProof
 

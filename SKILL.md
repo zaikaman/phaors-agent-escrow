@@ -77,6 +77,7 @@ npx tsx scripts/status.ts --escrow <address> --id 1
 npx tsx scripts/demo-flow.ts --escrow <address> --amount 0.001
 npx tsx scripts/judge-demo.ts --escrow <address> --amount 0.001
 npx tsx scripts/verify-and-release.ts --escrow <address> --id 1
+npx tsx scripts/find-open-work.ts --escrow <address> --worker <workerAddress> --asset native --min-amount 0.001
 npx tsx scripts/events.ts --escrow <address>
 npx tsx scripts/reputation.ts --escrow <address> --agent <agentAddress> --asset native
 ```
@@ -91,6 +92,12 @@ Use `scripts/judge-demo.ts` for the full Phase 1 walkthrough. It uses three fund
 - `GROQ_API_KEY`: Groq Responses API key.
 
 The Reputation Agent is read-only. It summarizes the worker with contract reads after release.
+
+## Worker Discovery
+
+Use `scripts/find-open-work.ts` when a worker agent needs to discover claimable jobs. It scans `WorkOrderCreated` events, confirms each candidate is still `Open`, filters by asset, minimum reward, deadline, and worker eligibility, then prints claimable jobs with explorer links and accept commands.
+
+Use `--worker <address>` to show only open jobs or jobs designated for that worker. Use `--asset native`, `--asset <erc20Address>`, or omit it for all assets. Use `--all` to scan from deployment, or `--from-block <block>` for a known window.
 
 ## Verifier Policy
 
