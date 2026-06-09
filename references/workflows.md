@@ -61,6 +61,7 @@ function acceptWorkOrder(uint256 id) external
 
 ```powershell
 npx tsx scripts/find-open-work.ts --network atlantic-testnet --escrow <address> --worker <workerAddress> --asset native --min-amount 0.001
+npm run rank-open-work -- --network atlantic-testnet --escrow <address> --worker <workerAddress> --asset native --min-amount 0.001 --limit 10
 ```
 
 ### submitProof
@@ -119,6 +120,12 @@ function getAgentStats(address agent) external view returns (AgentStats memory)
 function getAgentAssetVolumeReleased(address agent, address asset) external view returns (uint256)
 function nextWorkOrderId() external view returns (uint256)
 ```
+
+## Marketplace Scoring
+
+- `rank-open-work` returns scored open jobs for worker agents. Scores combine reward size, deadline urgency, verifier presence, metadata evidence, and worker eligibility.
+- `recommend-worker` returns scored workers for planner or marketplace agents. Scores combine completion rate, submission rate, refund rate, selected-asset volume, and recent activity.
+- Both scripts output JSON designed for another agent to consume without parsing terminal prose.
 
 ## Demo Metadata Shape
 

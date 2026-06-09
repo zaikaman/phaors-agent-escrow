@@ -16,6 +16,8 @@
     "judge-demo-usdc": "tsx scripts/judge-demo.ts --asset usdc --amount 1",
     "verify-and-release": "tsx scripts/verify-and-release.ts",
     "find-open-work": "tsx scripts/find-open-work.ts",
+    "rank-open-work": "tsx scripts/rank-open-work.ts",
+    "recommend-worker": "tsx scripts/recommend-worker.ts",
     "events": "tsx scripts/events.ts",
     "reputation": "tsx scripts/reputation.ts"
   },

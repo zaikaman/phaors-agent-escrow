@@ -86,6 +86,8 @@ npx tsx scripts/judge-demo.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f12
 npm run judge-demo-usdc -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
 npx tsx scripts/verify-and-release.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --id 1
 npx tsx scripts/find-open-work.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset native --min-amount 0.001
+npm run rank-open-work -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset native --min-amount 0.001 --limit 10
+npm run recommend-worker -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --asset native --candidates <workerA>,<workerB> --limit 10
 npx tsx scripts/events.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
 npx tsx scripts/reputation.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --agent <agentAddress> --asset native
 ```
@@ -110,6 +112,10 @@ The Reputation Agent is read-only. It summarizes the worker with contract reads 
 Use `scripts/find-open-work.ts` when a worker agent needs to discover claimable jobs. It scans `WorkOrderCreated` events, confirms each candidate is still `Open`, filters by asset, minimum reward, work deadline, and worker eligibility, then prints claimable jobs with explorer links and accept commands.
 
 Use `--worker <address>` to show only open jobs or jobs designated for that worker. Use `--asset native`, `--asset <erc20Address>`, or omit it for all assets. Use `--all` to scan from deployment, or `--from-block <block>` for a known window.
+
+Use `scripts/rank-open-work.ts` when a worker or marketplace agent needs prioritized jobs instead of a plain claimable list. It scores open work by reward, deadline urgency, verifier presence, metadata evidence, and worker eligibility.
+
+Use `scripts/recommend-worker.ts` when a planner or marketplace agent needs to rank candidate workers. It scores workers by completed jobs, submission rate, refund rate, selected-asset volume, and recent activity. Output is structured JSON for direct agent routing.
 
 ## Verifier Policy
 

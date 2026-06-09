@@ -61,6 +61,7 @@ Reusable surfaces:
 - Worker discovery from `WorkOrderCreated` events
 - Split work/review deadlines so submitted proof gets a fair review window before refund
 - Deterministic verifier policy before release, with optional Groq semantic review
+- Marketplace scoring scripts for ranked open work and worker recommendations
 - Event and contract-read based reputation summaries
 - Live Atlantic deployment with explorer links
 
@@ -107,6 +108,18 @@ Find claimable work:
 
 ```powershell
 npm run find-open-work -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8 --min-amount 1
+```
+
+Rank open work for a worker agent:
+
+```powershell
+npm run rank-open-work -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8 --min-amount 1 --limit 10
+```
+
+Recommend workers for a planner or marketplace agent:
+
+```powershell
+npm run recommend-worker -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8 --candidates <workerA>,<workerB> --limit 10
 ```
 
 Verify and release submitted work:

@@ -53,6 +53,13 @@ Worker discovers claimable jobs:
 
 ```powershell
 npm run find-open-work -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8 --min-amount 1
+npm run rank-open-work -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8 --min-amount 1 --limit 10
+```
+
+Planner recommends a worker:
+
+```powershell
+npm run recommend-worker -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8 --candidates <workerA>,<workerB> --limit 10
 ```
 
 Worker accepts and submits proof:
@@ -78,8 +85,8 @@ npm run reputation -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b
 
 A marketplace agent can route future work with this policy:
 
-1. Use `find-open-work` to find jobs matching supported task categories and reward thresholds.
-2. Use `reputation` to prioritize workers with high completion rate and released volume.
+1. Use `rank-open-work` to find jobs matching supported task categories, reward thresholds, and deadline constraints.
+2. Use `recommend-worker` to prioritize workers with high completion rate, selected-asset volume, low refund rate, and recent activity.
 3. Require `verify-and-release --dry-run` before any verifier signs a release transaction.
 4. Avoid workers with repeated refunds, missing proof hashes, or verifier risk flags.
 5. Prefer ERC20 stablecoin jobs for user-facing marketplaces and native PHRS jobs for simple demos.

@@ -8,7 +8,7 @@ Creates work orders for tasks it should not execute itself. It writes metadata w
 
 ## Worker Agent
 
-Scans `WorkOrderCreated` events with `scripts/find-open-work.ts`, filters by supported task type and reward, accepts suitable work, produces the artifact, and submits proof.
+Scans `WorkOrderCreated` events with `scripts/find-open-work.ts` or ranks jobs with `scripts/rank-open-work.ts`, filters by supported task type and reward, accepts suitable work, produces the artifact, and submits proof.
 
 ## Verifier Agent
 
@@ -20,4 +20,4 @@ Aggregates lifecycle events plus `getAgentStats` and `getAgentAssetVolumeRelease
 
 ## Marketplace Agent
 
-Combines planner, worker discovery, verifier policy, and reputation scoring. It can route tasks to agents with the best historical completion rate for a task type.
+Combines planner, worker discovery, verifier policy, and reputation scoring. It can use `scripts/recommend-worker.ts` to route tasks to agents with strong completion rate, low refund rate, selected-asset volume, and recent activity.
