@@ -84,6 +84,7 @@ npm run validate-metadata -- --kind proof --file assets/templates/proof.metadata
 npx tsx scripts/demo-flow.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --amount 0.001
 npx tsx scripts/judge-demo.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --amount 0.001
 npm run judge-demo-usdc -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
+npm run marketplace-demo -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --asset native --amount 0.001
 npx tsx scripts/verify-and-release.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --id 1
 npx tsx scripts/find-open-work.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset native --min-amount 0.001
 npm run rank-open-work -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset native --min-amount 0.001 --limit 10
@@ -95,6 +96,8 @@ npx tsx scripts/reputation.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f12
 ## Judge Demo
 
 Use `npm run judge-demo-usdc` for the strongest Phase 1 walkthrough. It uses Atlantic USDC, three funded wallets, ERC20 approval, on-chain escrow, proof verification, release, and asset-specific reputation. Use `scripts/judge-demo.ts --asset native` for the simpler native-token variant.
+
+Use `npm run marketplace-demo` for the Phase 2 composition walkthrough. It runs the planner, marketplace recommender, worker, verifier, and reputation roles in one command and prints a structured transcript with explorer links.
 
 The USDC demo uses three funded wallets and real Groq LLM calls:
 

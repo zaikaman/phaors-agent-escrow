@@ -14,6 +14,18 @@ npx tsx scripts/demo-flow.ts --network atlantic-testnet --escrow 0x047119bdf422f
 
 The script prints transaction hashes and explorer links for create, accept, submit, and release.
 
+## Phase 2 Mini Marketplace Demo
+
+This is the repeatable composition demo for judges who want to see how the Skill becomes a marketplace agent loop:
+
+```powershell
+cd D:\pharos-hackathon\pharos-agent-escrow
+npm ci
+npm run marketplace-demo -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --asset native --amount 0.001
+```
+
+It prints worker recommendation, ranked work, transaction explorer links, verifier decision, reputation summary, and a final machine-readable transcript.
+
 ## Judge-Grade USDC Three-Agent Demo
 
 This is the recommended live judging flow. It uses Atlantic USDC, three funded wallets, ERC20 approval, on-chain escrow, real Groq LLM calls, and asset-specific reputation:

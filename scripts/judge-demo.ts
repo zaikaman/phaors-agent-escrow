@@ -81,6 +81,8 @@ const workDeadline = BigInt(now + Math.floor(workDeadlineMinutes * 60));
 const reviewDeadline = BigInt(now + Math.floor((workDeadlineMinutes + reviewPeriodMinutes) * 60));
 const taskBrief = (args.task as string | undefined) ||
   "Produce a concise judge-facing explanation of why on-chain escrow matters for AI agent work markets on Pharos.";
+const marketplaceMode = Boolean(args.marketplace) || Boolean(args["marketplace-transcript"]);
+const transactions: Record<string, string> = {};
 
 function sha256Json(value: unknown) {
   return createCryptoHash("sha256").update(JSON.stringify(value)).digest("hex");
@@ -163,7 +165,7 @@ function validatePlannerTaskDraft(task: PlannerTaskDraft) {
 }
 
 function validateWorkerProofDraft(proof: WorkerProofDraft, task: TaskMetadata) {
-  if (!proof.resultSummary || !proof.deliveredArtifact || !Array.isArray(proof.criteriaResults)) {
+  if (!proof.resultSummary || proof.deliveredArtifact === undefined || proof.deliveredArtifact === null || !Array.isArray(proof.criteriaResults)) {
     throw new Error("Worker Agent returned an invalid proof shape.");
   }
   if (proof.criteriaResults.length < task.acceptanceCriteria.length) {
@@ -171,10 +173,79 @@ function validateWorkerProofDraft(proof: WorkerProofDraft, task: TaskMetadata) {
   }
 }
 
+function normalizeArtifact(value: unknown) {
+  return typeof value === "string" ? value : JSON.stringify(value, null, 2);
+}
+
 function validateVerifierDecision(decision: VerifierDecision) {
   if (typeof decision.releasePayment !== "boolean" || !decision.rationale || !Array.isArray(decision.failedCriteria)) {
     throw new Error("Verifier Agent returned an invalid decision shape.");
   }
+}
+
+async function recommendWorkerTranscript() {
+  const [stats, selectedAssetVolume] = await Promise.all([
+    publicClient.readContract({
+      address: escrowAddress,
+      abi: escrowAbi,
+      functionName: "getAgentStats",
+      args: [worker.account.address],
+    }),
+    publicClient.readContract({
+      address: escrowAddress,
+      abi: escrowAbi,
+      functionName: "getAgentAssetVolumeReleased",
+      args: [worker.account.address, asset],
+    }),
+  ]);
+  const accepted = Number(stats.accepted);
+  const completed = Number(stats.completed);
+  const submitted = Number(stats.submitted);
+  const completionRate = accepted === 0 ? 0 : completed / accepted;
+  const submissionRate = accepted === 0 ? 0 : submitted / accepted;
+  const volumeScore = Math.min(1, Math.log10(Number(formatUnits(selectedAssetVolume, assetDecimals)) + 1) / 3);
+  const score = Math.round(100 * (completionRate * 0.45 + submissionRate * 0.25 + volumeScore * 0.2 + (accepted > 0 ? 0.1 : 0)));
+  return {
+    worker: worker.account.address,
+    score,
+    recommendation: score >= 75 ? "recommended" : score >= 50 ? "acceptable" : "selected-for-demo",
+    reason: accepted === 0
+      ? "No prior escrow history on this deployment; selected as the funded Worker Agent for a fresh marketplace task."
+      : "Selected from on-chain completion, submission, and selected-asset volume signals.",
+    scoreBreakdown: {
+      completionRate,
+      submissionRate,
+      selectedAssetVolumeScore: Math.round(volumeScore * 100) / 100,
+    },
+    selectedAssetVolumeFormatted: formatUnits(selectedAssetVolume, assetDecimals),
+  };
+}
+
+function rankCreatedWorkTranscript(workOrderId: bigint, metadata: TaskMetadata) {
+  const secondsRemaining = Number(workDeadline - BigInt(Math.floor(Date.now() / 1000)));
+  const hoursRemaining = Math.max(secondsRemaining / 3600, 0.01);
+  const rewardScore = Math.min(45, Math.log10(Number(formatUnits(amount, assetDecimals)) + 1) * 18);
+  const urgencyScore = Math.min(25, 25 / Math.sqrt(hoursRemaining));
+  const trustScore = 30;
+  const score = Math.round((rewardScore + urgencyScore + trustScore) * 100) / 100;
+  return {
+    workOrderId: workOrderId.toString(),
+    score,
+    recommendation: score >= 55 ? "high-priority" : score >= 35 ? "consider" : "low-priority",
+    reason: "Designated worker, verifier configured, schema-valid content-addressed metadata, and funded reward.",
+    scoreBreakdown: {
+      reward: Math.round(rewardScore * 100) / 100,
+      urgency: Math.round(urgencyScore * 100) / 100,
+      trust: trustScore,
+    },
+    worker: worker.account.address,
+    verifier: verifier.account.address,
+    asset: asset === zeroAddress() ? "native" : asset,
+    assetLabel,
+    amount: formatUnits(amount, assetDecimals),
+    metadataURI: hashUri(sha256Json(metadata)),
+    acceptCommand: `npx tsx scripts/accept-submit-release.ts accept --network ${network.name} --escrow ${escrowAddress} --id ${workOrderId.toString()}`,
+  };
 }
 
 async function callGroq<T>(role: AgentRole, prompt: string): Promise<T> {
@@ -254,6 +325,14 @@ console.log(`asset: ${asset === zeroAddress() ? "native" : asset}`);
 console.log(`amount: ${formatUnits(amount, assetDecimals)} ${assetLabel}`);
 await printBalances();
 
+let marketplaceTranscript: Record<string, unknown> | undefined;
+if (marketplaceMode) {
+  console.log("\n0. Marketplace Agent recommends a worker from on-chain reputation");
+  const workerRecommendation = await recommendWorkerTranscript();
+  marketplaceTranscript = { workerRecommendation };
+  console.log(JSON.stringify({ workerRecommendation }, null, 2));
+}
+
 console.log("\n1. Planner Agent creates task metadata with Groq");
 const taskDraft = await callGroq<PlannerTaskDraft>(
   "Planner Agent",
@@ -298,6 +377,7 @@ if (asset !== zeroAddress()) {
     account: planner.account,
   });
   await waitAndPrint(publicClient, network, approveHash);
+  transactions.erc20Approve = `${network.explorerUrl}/tx/${approveHash}`;
 }
 
 const createTxHash = await planner.walletClient.writeContract({
@@ -309,8 +389,16 @@ const createTxHash = await planner.walletClient.writeContract({
   value: asset === zeroAddress() ? amount : 0n,
 });
 await waitAndPrint(publicClient, network, createTxHash);
+transactions.createWorkOrder = `${network.explorerUrl}/tx/${createTxHash}`;
 
-console.log("\n2. Worker Agent accepts the paid task");
+if (marketplaceMode) {
+  console.log("\n2. Worker Agent ranks the newly posted open work");
+  const rankedWork = rankCreatedWorkTranscript(id, task);
+  marketplaceTranscript = { ...(marketplaceTranscript || {}), rankedWork };
+  console.log(JSON.stringify({ rankedWork }, null, 2));
+}
+
+console.log(`\n${marketplaceMode ? "3" : "2"}. Worker Agent accepts the paid task`);
 const acceptHash = await worker.walletClient.writeContract({
   address: escrowAddress,
   abi: escrowAbi,
@@ -319,8 +407,9 @@ const acceptHash = await worker.walletClient.writeContract({
   account: worker.account,
 });
 await waitAndPrint(publicClient, network, acceptHash);
+transactions.acceptWorkOrder = `${network.explorerUrl}/tx/${acceptHash}`;
 
-console.log("\n3. Worker Agent performs the task with Groq and submits proof");
+console.log(`\n${marketplaceMode ? "4" : "3"}. Worker Agent performs the task with Groq and submits proof`);
 const proofDraft = await callGroq<WorkerProofDraft>(
   "Worker Agent",
   `You are Worker Agent completing this paid Pharos task.
@@ -330,13 +419,14 @@ Task metadata JSON:
 ${JSON.stringify(task, null, 2)}`
 );
 validateWorkerProofDraft(proofDraft, task);
+const deliveredArtifact = normalizeArtifact(proofDraft.deliveredArtifact);
 const proof: ProofMetadata = {
   schema: "pharos-agent-escrow/proof/v1",
   workOrderId: id.toString(),
   workerAgent: task.workerAgent,
-  resultURI: hashUri(sha256Json(proofDraft.deliveredArtifact)),
-  resultSha256: sha256Json(proofDraft.deliveredArtifact),
-  deliveredArtifact: proofDraft.deliveredArtifact,
+  resultURI: hashUri(sha256Json(deliveredArtifact)),
+  resultSha256: sha256Json(deliveredArtifact),
+  deliveredArtifact,
   summary: proofDraft.resultSummary,
   criteriaResults: proofDraft.criteriaResults,
   verificationNotes: [
@@ -359,8 +449,9 @@ const submitHash = await worker.walletClient.writeContract({
   account: worker.account,
 });
 await waitAndPrint(publicClient, network, submitHash);
+transactions.submitProof = `${network.explorerUrl}/tx/${submitHash}`;
 
-console.log("\n4. Verifier Agent checks metadata/proof with Groq and releases payment");
+console.log(`\n${marketplaceMode ? "5" : "4"}. Verifier Agent checks metadata/proof with Groq and releases payment`);
 const decision = await callGroq<VerifierDecision>(
   "Verifier Agent",
   `You are Verifier Agent for an on-chain Pharos escrow.
@@ -388,8 +479,9 @@ const releaseHash = await verifier.walletClient.writeContract({
   account: verifier.account,
 });
 await waitAndPrint(publicClient, network, releaseHash);
+transactions.releasePayment = `${network.explorerUrl}/tx/${releaseHash}`;
 
-console.log("\n5. Reputation Agent summarizes worker history");
+console.log(`\n${marketplaceMode ? "6" : "5"}. Reputation Agent summarizes worker history`);
 const [order, stats, assetVolume] = await Promise.all([
   publicClient.readContract({
     address: escrowAddress,
@@ -413,6 +505,27 @@ const [order, stats, assetVolume] = await Promise.all([
 const accepted = Number(stats.accepted);
 const completed = Number(stats.completed);
 const completionRate = accepted === 0 ? null : completed / accepted;
+const finalReputation = {
+  accepted: stats.accepted.toString(),
+  submitted: stats.submitted.toString(),
+  completed: stats.completed.toString(),
+  refunded: stats.refunded.toString(),
+  completionRate,
+  selectedAssetVolumeReleased: assetVolume.toString(),
+  selectedAssetVolumeFormatted: formatUnits(assetVolume, assetDecimals),
+};
+if (marketplaceMode) {
+  marketplaceTranscript = {
+    ...(marketplaceTranscript || {}),
+    verification: {
+      verifier: verifier.account.address,
+      decision: decision.releasePayment ? "release" : "reject",
+      rationale: decision.rationale,
+    },
+    finalReputation,
+    transactions,
+  };
+}
 
 const artifactDir = join(process.cwd(), "demo-artifacts", id.toString());
 mkdirSync(artifactDir, { recursive: true });
@@ -433,15 +546,9 @@ console.log(JSON.stringify(
     assetLabel,
     amount: formatUnits(amount, assetDecimals),
     explorer: `${network.explorerUrl}/address/${escrowAddress}`,
-    workerReputation: {
-      accepted: stats.accepted.toString(),
-      submitted: stats.submitted.toString(),
-      completed: stats.completed.toString(),
-      refunded: stats.refunded.toString(),
-      completionRate,
-      selectedAssetVolumeReleased: assetVolume.toString(),
-      selectedAssetVolumeFormatted: formatUnits(assetVolume, assetDecimals),
-    },
+    transactions,
+    marketplaceTranscript: marketplaceTranscript || null,
+    workerReputation: finalReputation,
     localArtifacts: artifactDir,
   },
   null,

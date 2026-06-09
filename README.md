@@ -39,6 +39,12 @@ Run the judge-grade three-agent USDC Groq demo:
 npm run judge-demo-usdc -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
 ```
 
+Run the Phase 2 mini marketplace composition demo:
+
+```powershell
+npm run marketplace-demo -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --asset native --amount 0.001
+```
+
 Required for the three-agent demo:
 
 - `PHAROS_PRIVATE_KEY`: Planner Agent wallet
@@ -103,6 +109,14 @@ npm run judge-demo-usdc -- --network atlantic-testnet --escrow 0x047119bdf422fc8
 ```
 
 The USDC demo performs ERC20 approval, creates a funded work order, accepts, submits proof, verifies with Groq, releases payment, and prints worker reputation for the selected asset.
+
+Run the one-command Phase 2 marketplace transcript:
+
+```powershell
+npm run marketplace-demo -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --asset native --amount 0.001
+```
+
+The marketplace demo prints worker recommendation, ranked work, on-chain lifecycle transactions, verifier decision, reputation summary, and explorer links in one JSON transcript.
 
 Find claimable work:
 

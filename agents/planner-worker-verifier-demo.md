@@ -23,21 +23,29 @@ This runbook shows how a Phase 2 agent marketplace can compose `pharos-agent-esc
 
 ## End-To-End Demo
 
-Run the complete three-agent flow:
+Run the complete mini marketplace flow:
 
 ```powershell
-npm run judge-demo-usdc -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
+npm run marketplace-demo -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --asset native --amount 0.001
 ```
 
 This produces:
 
 - Planner-generated task metadata
-- ERC20 approval for Atlantic USDC escrow funding
+- Marketplace worker recommendation from on-chain reputation
+- Worker-side ranked work recommendation
 - On-chain escrow funding
 - Worker acceptance and proof submission
 - Verifier release decision using Groq `qwen/qwen3-32b`
 - Worker reputation summary
 - Explorer links for every transaction
+- Final JSON transcript for another agent to consume
+
+For a USDC-funded variant, run:
+
+```powershell
+npm run marketplace-demo -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --asset usdc --amount 1
+```
 
 ## Script-Driven Marketplace Composition
 
