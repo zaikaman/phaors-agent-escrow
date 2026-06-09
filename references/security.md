@@ -38,6 +38,7 @@ npm ci
 npm run build
 npm test
 npx tsc --noEmit
+npm run doctor -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --mode one-wallet --no-groq
 npm run validate-metadata -- --kind task --file .\assets\templates\task.metadata.json
 npm run validate-metadata -- --kind proof --file .\assets\templates\proof.metadata.json
 python C:\Users\admin\.codex\skills\.system\skill-creator\scripts\quick_validate.py .

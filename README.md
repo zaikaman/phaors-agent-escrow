@@ -2,6 +2,43 @@
 
 Reusable Pharos Skill for agent-to-agent work orders. A planner agent escrows native PHRS/PROS or ERC20 tokens, a worker agent accepts and submits proof, and a buyer or verifier agent releases payment only when the work passes review.
 
+## Submission Packet
+
+`pharos-agent-escrow` is a reusable on-chain work-order primitive for AI agents on Pharos. It turns agent work into a verifiable escrow lifecycle: a planner funds a task, a worker accepts and submits proof, and a buyer or verifier releases payment only after the proof satisfies the task metadata.
+
+Pharos needs this because agent economies require more than direct transfers. Agents need a shared way to price work, lock funds, verify completion, refund expired jobs, discover open opportunities, and build event-based reputation that future marketplace agents can reuse.
+
+One-command preflight for the judge-grade demo:
+
+```powershell
+npm run doctor -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
+```
+
+This strict preflight expects `PHAROS_PRIVATE_KEY`, `PHAROS_PRIVATE_KEY_2`, `PHAROS_PRIVATE_KEY_3`, `GROQ_API_KEY`, native PHRS gas on all three wallets, and Atlantic USDC on the planner wallet.
+
+One-command live demo:
+
+```powershell
+npm run judge-demo-usdc -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
+```
+
+Live Pharos Atlantic proof:
+
+- Split-deadline escrow: `0x047119bdf422fc82021b88cf679ddeddd500f128`
+- Deployment transaction: https://atlantic.pharosscan.xyz/tx/0x37bb393e45c6df5d6da4eef5a858cc289900cc05f5e3d7090839b8ccf9a9135d
+- Recent create: https://atlantic.pharosscan.xyz/tx/0xa067bfbbe68146b14e890ab9c22621c5b35bd709fa70d772b86117f8a3ae955b
+- Recent accept: https://atlantic.pharosscan.xyz/tx/0x627d43b98343d09408c3386ed51ab62b55dd2326582f76d9cdf20b8641548112
+- Recent proof: https://atlantic.pharosscan.xyz/tx/0x0b67b725160e39595b9b40cdf7ecb4bdbaa85ba05b3582638806f4d39d62946a
+- Recent release: https://atlantic.pharosscan.xyz/tx/0xb670740ad2f183cd62908ee8ef8173168f42c8d67774bfa11d3c997b38c2540e
+
+Judging alignment:
+
+- Originality: agent-to-agent escrow is a higher-level work market primitive, not a basic token transfer.
+- Technical quality: includes Solidity contract, TypeScript CLIs, schemas, tests, live deployment, and preflight checks.
+- Practical use: enables paid agent outsourcing, proof review, refunds, reputation, and marketplace routing.
+- Reusability: planner, worker, verifier, reputation, and marketplace agents can all compose the same Skill.
+- Pharos relevance: every write action runs on Pharos Atlantic with explorer links.
+
 ## Run This In 3 Minutes
 
 From the repository root:
@@ -16,6 +53,7 @@ Run local production checks:
 npm run build
 npm test
 npx tsc --noEmit
+npm run doctor -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --mode one-wallet --no-groq
 npm run validate-metadata -- --kind task --file .\assets\templates\task.metadata.json
 npm run validate-metadata -- --kind proof --file .\assets\templates\proof.metadata.json
 python C:\Users\admin\.codex\skills\.system\skill-creator\scripts\quick_validate.py .

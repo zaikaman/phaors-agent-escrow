@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsx scripts/foundry.ts build",
     "test": "tsx scripts/foundry.ts test",
+    "doctor": "tsx scripts/doctor.ts",
     "deploy": "tsx scripts/deploy.ts",
     "create": "tsx scripts/create-work-order.ts",
     "work": "tsx scripts/accept-submit-release.ts",

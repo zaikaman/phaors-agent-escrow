@@ -1,10 +1,6 @@
 ---
 name: pharos-agent-escrow
 description: Use when an AI agent needs to create, fund, accept, complete, verify, release, refund, or audit an on-chain work order escrow on Pharos. Supports agent-to-agent task payments with native PHRS/PROS or ERC20 assets, work metadata, proof submission, event-based reputation, and explorer links.
-license: MIT
-metadata:
-  author: thinhdinh1706
-  version: "0.1.0"
 ---
 
 # Pharos Agent Escrow
@@ -74,6 +70,7 @@ Common commands:
 
 ```bash
 npx tsx scripts/deploy.ts
+npm run doctor -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
 npx tsx scripts/create-work-order.ts --escrow <address> --asset native --amount 0.1 --work-deadline-minutes 60 --review-period-minutes 60 --metadata "ipfs://..."
 npx tsx scripts/accept-submit-release.ts accept --escrow <address> --id 1
 npx tsx scripts/accept-submit-release.ts submit --escrow <address> --id 1 --proof "ipfs://..."
