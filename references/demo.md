@@ -9,7 +9,7 @@ This creates a native escrow order where the same wallet plays buyer, worker, an
 ```powershell
 cd D:\pharos-hackathon\pharos-agent-escrow
 npm ci
-npx tsx scripts/demo-flow.ts --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --amount 0.001
+npx tsx scripts/demo-flow.ts --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --amount 0.001
 ```
 
 The script prints transaction hashes and explorer links for create, accept, submit, and release.
@@ -26,7 +26,7 @@ This is the recommended live judging flow. It uses three funded wallets and real
 ```powershell
 cd D:\pharos-hackathon\pharos-agent-escrow
 npm ci
-npm run judge-demo -- --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --amount 0.001
+npm run judge-demo -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --amount 0.001
 ```
 
 Flow:
@@ -44,27 +44,27 @@ The script writes generated task, proof, and verifier decision JSON to `demo-art
 Use this when a work order is already in `Submitted` status and the verifier should decide whether to release funds:
 
 ```powershell
-npx tsx scripts/verify-and-release.ts --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --id <workOrderId>
+npx tsx scripts/verify-and-release.ts --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --id <workOrderId>
 ```
 
 For a no-transaction validation pass:
 
 ```powershell
-npx tsx scripts/verify-and-release.ts --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --id <workOrderId> --dry-run
+npx tsx scripts/verify-and-release.ts --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --id <workOrderId> --dry-run
 ```
 
 ## Inspect Events
 
 ```powershell
-npx tsx scripts/events.ts --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585
+npx tsx scripts/events.ts --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
 ```
 
-By default this scans the latest 1000 blocks to respect Atlantic RPC limits. Add `--from-block <block>` for a specific window or `--all` for a deployment-to-latest scan.
+By default this scans the latest 1000 blocks to respect Atlantic RPC limits. Add `--from-block <block>` for a specific window, or combine `--all` with `--deployment-tx <hash>` for a deployment-to-latest scan.
 
 ## Inspect Reputation
 
 ```powershell
-npx tsx scripts/reputation.ts --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --agent <agentAddress> --asset native
+npx tsx scripts/reputation.ts --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --agent <agentAddress> --asset native
 ```
 
 Use `--asset 0x0000000000000000000000000000000000000000` for native PHRS.

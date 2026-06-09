@@ -26,7 +26,7 @@ This runbook shows how a Phase 2 agent marketplace can compose `pharos-agent-esc
 Run the complete three-agent flow:
 
 ```powershell
-npm run judge-demo -- --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --amount 0.001
+npm run judge-demo -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --amount 0.001
 ```
 
 This produces:
@@ -45,32 +45,32 @@ A marketplace agent can run each stage independently.
 Planner creates a paid job:
 
 ```powershell
-npm run create -- --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --asset native --amount 0.001 --deadline-minutes 60 --metadata <taskMetadataURI> --worker <optionalWorkerAddress> --verifier <verifierAddress>
+npm run create -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --asset native --amount 0.001 --work-deadline-minutes 60 --review-period-minutes 60 --metadata <taskMetadataURI> --worker <optionalWorkerAddress> --verifier <verifierAddress>
 ```
 
 Worker discovers claimable jobs:
 
 ```powershell
-npm run find-open-work -- --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --worker <workerAddress> --asset native --min-amount 0.001
+npm run find-open-work -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset native --min-amount 0.001
 ```
 
 Worker accepts and submits proof:
 
 ```powershell
-npm run work -- accept --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --id <workOrderId>
-npm run work -- submit --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --id <workOrderId> --proof <proofURI>
+npm run work -- accept --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --id <workOrderId>
+npm run work -- submit --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --id <workOrderId> --proof <proofURI>
 ```
 
 Verifier checks and releases:
 
 ```powershell
-npm run verify-and-release -- --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --id <workOrderId>
+npm run verify-and-release -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --id <workOrderId>
 ```
 
 Reputation Agent ranks the worker:
 
 ```powershell
-npm run reputation -- --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --agent <workerAddress> --asset native
+npm run reputation -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --agent <workerAddress> --asset native
 ```
 
 ## Routing Policy Example

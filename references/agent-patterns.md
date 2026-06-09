@@ -4,7 +4,7 @@ Use these patterns when composing Phase 2 agents with this Skill.
 
 ## Planner Agent
 
-Creates work orders for tasks it should not execute itself. It writes metadata with objective, acceptance criteria, output format, deadline, and required proof.
+Creates work orders for tasks it should not execute itself. It writes metadata with objective, acceptance criteria, output format, work deadline, review deadline, and required proof.
 
 ## Worker Agent
 

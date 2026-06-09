@@ -16,12 +16,12 @@ type CreatedEvent = {
   verifier: `0x${string}`;
   asset: `0x${string}`;
   amount: bigint;
-  deadline: bigint;
+  workDeadline: bigint;
+  reviewDeadline: bigint;
   metadataURI: string;
 };
 
 const statuses = ["None", "Open", "Accepted", "Submitted", "Released", "Refunded", "Cancelled"];
-const deploymentTx = "0xb79589f425bc952edc30857cbeaed8d83c39cfc3ef16ad06b329be743fbbe611" as const;
 const args = parseArgs();
 const { network, publicClient } = makeReadClient(args);
 const escrowAddress = requireArg(args, "escrow") as `0x${string}`;
@@ -29,9 +29,13 @@ const workerFilter = args.worker as `0x${string}` | undefined;
 const assetArg = (args.asset as string | undefined) || "all";
 const minAmountArg = args["min-amount"] as string | undefined;
 const fromBlockArg = args["from-block"] as string | undefined;
+const deploymentTx = args["deployment-tx"] as `0x${string}` | undefined;
 const scanAll = Boolean(args.all);
 const chunkSize = BigInt((args["chunk-size"] as string | undefined) || "1000");
 
+if (scanAll && !fromBlockArg && !deploymentTx) {
+  throw new Error("Use --from-block <block> or --deployment-tx <hash> with --all.");
+}
 if (chunkSize <= 0n) {
   throw new Error("--chunk-size must be positive");
 }
@@ -45,7 +49,7 @@ if (workerFilter && !/^0x[0-9a-fA-F]{40}$/.test(workerFilter)) {
 const requestedAsset = assetArg === "native" ? zeroAddress() : assetArg === "all" ? undefined : (assetArg as `0x${string}`);
 const latestBlock = await publicClient.getBlockNumber();
 const receipt = scanAll && !fromBlockArg
-  ? await publicClient.getTransactionReceipt({ hash: deploymentTx })
+  ? await publicClient.getTransactionReceipt({ hash: deploymentTx! })
   : undefined;
 const defaultWindowStart = latestBlock > chunkSize ? latestBlock - chunkSize + 1n : 0n;
 const fromBlock = fromBlockArg
@@ -125,7 +129,7 @@ const claimable = [];
 for (const created of createdEvents) {
   if (!isAssetMatch(created.asset)) continue;
   if (!isWorkerEligible(created.worker)) continue;
-  if (created.deadline <= now) continue;
+  if (created.workDeadline <= now) continue;
 
   const minAmount = await minAmountForAsset(created.asset);
   if (created.amount < minAmount) continue;
@@ -137,7 +141,7 @@ for (const created of createdEvents) {
     args: [created.id],
   });
   if (order.status !== 1) continue;
-  if (order.deadline <= now) continue;
+  if (order.workDeadline <= now) continue;
   if (!isWorkerEligible(order.worker)) continue;
 
   const decimals = await getAssetDecimals(order.asset);
@@ -156,10 +160,15 @@ for (const created of createdEvents) {
       raw: order.amount.toString(),
       formatted: formatUnits(order.amount, decimals),
     },
-    deadline: {
-      unix: order.deadline.toString(),
-      iso: new Date(Number(order.deadline) * 1000).toISOString(),
-      secondsRemaining: (order.deadline - now).toString(),
+    workDeadline: {
+      unix: order.workDeadline.toString(),
+      iso: new Date(Number(order.workDeadline) * 1000).toISOString(),
+      secondsRemaining: (order.workDeadline - now).toString(),
+    },
+    reviewDeadline: {
+      unix: order.reviewDeadline.toString(),
+      iso: new Date(Number(order.reviewDeadline) * 1000).toISOString(),
+      secondsRemaining: (order.reviewDeadline - now).toString(),
     },
     metadataURI: order.metadataURI,
     createdAt: {
@@ -174,7 +183,7 @@ for (const created of createdEvents) {
 }
 
 claimable.sort((a, b) => {
-  const deadlineDiff = BigInt(a.deadline.unix) - BigInt(b.deadline.unix);
+  const deadlineDiff = BigInt(a.workDeadline.unix) - BigInt(b.workDeadline.unix);
   if (deadlineDiff < 0n) return -1;
   if (deadlineDiff > 0n) return 1;
   const amountDiff = BigInt(b.amount.raw) - BigInt(a.amount.raw);

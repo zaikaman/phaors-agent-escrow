@@ -12,10 +12,13 @@ const args = parseArgs();
 const { account, network, publicClient, walletClient } = makeClients(args);
 const escrowAddress = requireArg(args, "escrow") as `0x${string}`;
 const amount = parseAmount((args.amount as string | undefined) || "0.001", 18);
-const deadlineMinutes = Number((args["deadline-minutes"] as string | undefined) || "20");
+const workDeadlineMinutes = Number((args["work-deadline-minutes"] as string | undefined) || (args["deadline-minutes"] as string | undefined) || "20");
+const reviewPeriodMinutes = Number((args["review-period-minutes"] as string | undefined) || "20");
 const metadataURI = (args.metadata as string | undefined) || "ipfs://pharos-agent-escrow-demo-task";
 const proofURI = (args.proof as string | undefined) || "ipfs://pharos-agent-escrow-demo-proof";
-const deadline = BigInt(Math.floor(Date.now() / 1000) + Math.floor(deadlineMinutes * 60));
+const now = Math.floor(Date.now() / 1000);
+const workDeadline = BigInt(now + Math.floor(workDeadlineMinutes * 60));
+const reviewDeadline = BigInt(now + Math.floor((workDeadlineMinutes + reviewPeriodMinutes) * 60));
 
 console.log("running self-contained native escrow demo");
 console.log(`network: ${network.name} (${network.chainId})`);
@@ -34,7 +37,7 @@ const createHash = await walletClient.writeContract({
   address: escrowAddress,
   abi: escrowAbi,
   functionName: "createWorkOrder",
-  args: [account.address, account.address, zeroAddress(), amount, deadline, metadataURI],
+  args: [account.address, account.address, zeroAddress(), amount, workDeadline, reviewDeadline, metadataURI],
   account,
   value: amount,
 });

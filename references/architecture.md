@@ -14,11 +14,15 @@
 ```text
 Open -> Accepted -> Submitted -> Released
   |         |           |
-  |         |           -> Refunded, after deadline by buyer
-  |         -> Refunded, after deadline by buyer
+  |         |           -> Refunded, after reviewDeadline by buyer
+  |         -> Refunded, after workDeadline by buyer
   -> Cancelled, before acceptance by buyer
-  -> Refunded, after deadline by buyer
+  -> Refunded, after workDeadline by buyer
 ```
+
+`workDeadline` controls when workers must accept and submit proof. `reviewDeadline`
+is later and gives the buyer or verifier time to review submitted proof before a
+refund can recover the escrow.
 
 ## Payment Assets
 
@@ -30,5 +34,7 @@ Open -> Accepted -> Submitted -> Released
 ## Live Deployment
 
 - Network: Pharos Atlantic testnet
-- Contract: `0x6f88b3c79325472f6439426e84c9303506661585`
-- Deploy tx: `0xb79589f425bc952edc30857cbeaed8d83c39cfc3ef16ad06b329be743fbbe611`
+- Current split-deadline contract: `0x047119bdf422fc82021b88cf679ddeddd500f128`
+- Current deploy tx: `0x37bb393e45c6df5d6da4eef5a858cc289900cc05f5e3d7090839b8ccf9a9135d`
+- Legacy single-deadline contract: `0x6f88b3c79325472f6439426e84c9303506661585`
+- Legacy deploy tx: `0xb79589f425bc952edc30857cbeaed8d83c39cfc3ef16ad06b329be743fbbe611`

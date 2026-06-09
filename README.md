@@ -19,22 +19,22 @@ npx tsc --noEmit
 python C:\Users\admin\.codex\skills\.system\skill-creator\scripts\quick_validate.py .
 ```
 
-Verify the live Atlantic deployment:
+Verify the live split-deadline Atlantic deployment:
 
 ```powershell
-& "$env:USERPROFILE\.foundry\bin\cast.exe" call 0x6f88b3c79325472f6439426e84c9303506661585 "nextWorkOrderId()(uint256)" --rpc-url https://atlantic.dplabs-internal.com
+& "$env:USERPROFILE\.foundry\bin\cast.exe" call 0x047119bdf422fc82021b88cf679ddeddd500f128 "nextWorkOrderId()(uint256)" --rpc-url https://atlantic.dplabs-internal.com
 ```
 
 Run the one-wallet lifecycle demo:
 
 ```powershell
-npm run demo -- --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --amount 0.001
+npm run demo -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --amount 0.001
 ```
 
 Run the judge-grade three-agent Groq demo:
 
 ```powershell
-npm run judge-demo -- --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --amount 0.001
+npm run judge-demo -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --amount 0.001
 ```
 
 Required for the three-agent demo:
@@ -54,6 +54,7 @@ Reusable surfaces:
 - Native PHRS/PROS and ERC20 escrow support
 - Task and proof metadata templates in `assets/templates/`
 - Worker discovery from `WorkOrderCreated` events
+- Split work/review deadlines so submitted proof gets a fair review window before refund
 - Groq-powered verifier policy before release
 - Event and contract-read based reputation summaries
 - Live Atlantic deployment with explorer links
@@ -69,14 +70,16 @@ Reusable surfaces:
 
 See `agents/planner-worker-verifier-demo.md` for a polished Phase 2 mini-agent composition.
 
-## Live Deployment Proof
+## Deployment Proof
 
-- Contract: `0x6f88b3c79325472f6439426e84c9303506661585`
+- Current split-deadline contract: `0x047119bdf422fc82021b88cf679ddeddd500f128`
+- Current deployment tx: https://atlantic.pharosscan.xyz/tx/0x37bb393e45c6df5d6da4eef5a858cc289900cc05f5e3d7090839b8ccf9a9135d
+- Legacy single-deadline contract: `0x6f88b3c79325472f6439426e84c9303506661585`
 - Network: Pharos Atlantic testnet
 - Chain ID: `688689`
 - RPC: `https://atlantic.dplabs-internal.com`
 - Explorer: `https://atlantic.pharosscan.xyz`
-- Deployment tx: https://atlantic.pharosscan.xyz/tx/0xb79589f425bc952edc30857cbeaed8d83c39cfc3ef16ad06b329be743fbbe611
+- Legacy deployment tx: https://atlantic.pharosscan.xyz/tx/0xb79589f425bc952edc30857cbeaed8d83c39cfc3ef16ad06b329be743fbbe611
 
 Recent successful three-agent demo transactions:
 
@@ -90,26 +93,26 @@ Recent successful three-agent demo transactions:
 Find claimable work:
 
 ```powershell
-npm run find-open-work -- --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --worker <workerAddress> --asset native --min-amount 0.001
+npm run find-open-work -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset native --min-amount 0.001
 ```
 
 Verify and release submitted work:
 
 ```powershell
-npm run verify-and-release -- --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --id <workOrderId>
+npm run verify-and-release -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --id <workOrderId>
 ```
 
 Dry-run verifier policy without sending a transaction:
 
 ```powershell
-npm run verify-and-release -- --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --id <workOrderId> --dry-run
+npm run verify-and-release -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --id <workOrderId> --dry-run
 ```
 
 Inspect events and worker reputation:
 
 ```powershell
-npm run events -- --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585
-npm run reputation -- --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --agent <agentAddress> --asset native
+npm run events -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
+npm run reputation -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --agent <agentAddress> --asset native
 ```
 
 ## Why This Can Win

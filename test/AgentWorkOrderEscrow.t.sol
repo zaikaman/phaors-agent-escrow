@@ -40,6 +40,7 @@ contract AgentWorkOrderEscrowTest {
             address(token),
             10_000_000,
             uint64(block.timestamp + 1 days),
+            uint64(block.timestamp + 2 days),
             "ipfs://task"
         );
 
@@ -69,6 +70,7 @@ contract AgentWorkOrderEscrowTest {
             address(token),
             5_000_000,
             uint64(block.timestamp + 1 days),
+            uint64(block.timestamp + 2 days),
             "ipfs://open-task"
         );
 
@@ -90,6 +92,7 @@ contract AgentWorkOrderEscrowTest {
             address(token),
             1_000_000,
             uint64(block.timestamp + 1 days),
+            uint64(block.timestamp + 2 days),
             "ipfs://designated-task"
         );
 
@@ -110,6 +113,7 @@ contract AgentWorkOrderEscrowTest {
             address(token),
             1_000_000,
             uint64(block.timestamp + 1 days),
+            uint64(block.timestamp + 2 days),
             "ipfs://release-task"
         );
 
@@ -136,6 +140,7 @@ contract AgentWorkOrderEscrowTest {
             address(0),
             2_000_000,
             uint64(block.timestamp + 1),
+            uint64(block.timestamp + 1 days),
             "ipfs://refund-task"
         );
 
@@ -162,12 +167,15 @@ contract AgentWorkOrderEscrowTest {
             address(0),
             3_000_000,
             uint64(block.timestamp + 1),
+            uint64(block.timestamp + 1 days),
             "ipfs://submitted-refund-task"
         );
 
         worker.accept(escrow, id);
         worker.submit(escrow, id, "ipfs://submitted-refund-proof");
         vm.warp(block.timestamp + 2);
+        require(!buyer.tryRefund(escrow, id), "submitted order refunded before review deadline");
+        vm.warp(block.timestamp + 1 days);
         buyer.refund(escrow, id);
 
         AgentWorkOrderEscrow.WorkOrder memory order = escrow.getWorkOrder(id);
@@ -186,6 +194,7 @@ contract AgentWorkOrderEscrowTest {
             address(token),
             1_000_000,
             uint64(block.timestamp + 1 days),
+            uint64(block.timestamp + 2 days),
             ""
         ) returns (uint256) {
             revert("empty metadata accepted");
@@ -205,6 +214,7 @@ contract AgentWorkOrderEscrowTest {
             address(token),
             1_000_000,
             uint64(block.timestamp + 1 days),
+            uint64(block.timestamp + 2 days),
             "ipfs://task"
         );
 
@@ -225,11 +235,31 @@ contract AgentWorkOrderEscrowTest {
             address(token),
             0,
             uint64(block.timestamp + 1 days),
+            uint64(block.timestamp + 2 days),
             "ipfs://zero-amount"
         ) returns (uint256) {
             revert("zero amount accepted");
         } catch {
             require(escrow.nextWorkOrderId() == 1, "work order created with zero amount");
+        }
+    }
+
+    function testRejectInvalidReviewDeadline() public {
+        beforeEach();
+        token.approve(address(escrow), 1_000_000);
+
+        try escrow.createWorkOrder(
+            address(0),
+            address(0),
+            address(token),
+            1_000_000,
+            uint64(block.timestamp + 1 days),
+            uint64(block.timestamp + 1 days),
+            "ipfs://invalid-review-deadline"
+        ) returns (uint256) {
+            revert("invalid review deadline accepted");
+        } catch {
+            require(escrow.nextWorkOrderId() == 1, "work order created with invalid review deadline");
         }
     }
 
@@ -242,6 +272,7 @@ contract AgentWorkOrderEscrowTest {
             address(0),
             1 ether,
             uint64(block.timestamp + 1 days),
+            uint64(block.timestamp + 2 days),
             "ipfs://native-mismatch"
         ) returns (uint256) {
             revert("native mismatch accepted");
@@ -262,6 +293,7 @@ contract AgentWorkOrderEscrowTest {
             address(token),
             1_000_000,
             uint64(block.timestamp + 1),
+            uint64(block.timestamp + 1 days),
             "ipfs://deadline-task"
         );
 
@@ -270,6 +302,29 @@ contract AgentWorkOrderEscrowTest {
 
         AgentWorkOrderEscrow.WorkOrder memory order = escrow.getWorkOrder(id);
         require(uint256(order.status) == uint256(AgentWorkOrderEscrow.Status.Open), "status changed after late accept");
+    }
+
+    function testRejectSubmitAfterWorkDeadline() public {
+        beforeEach();
+        worker = new WorkerActor();
+        token.approve(address(escrow), 1_000_000);
+
+        uint256 id = escrow.createWorkOrder(
+            address(worker),
+            address(0),
+            address(token),
+            1_000_000,
+            uint64(block.timestamp + 1),
+            uint64(block.timestamp + 1 days),
+            "ipfs://late-submit-task"
+        );
+
+        worker.accept(escrow, id);
+        vm.warp(block.timestamp + 2);
+        require(!worker.trySubmit(escrow, id, "ipfs://late-proof"), "submitted after work deadline");
+
+        AgentWorkOrderEscrow.WorkOrder memory order = escrow.getWorkOrder(id);
+        require(uint256(order.status) == uint256(AgentWorkOrderEscrow.Status.Accepted), "status changed after late submit");
     }
 
     function testBuyerCanReleaseWithoutVerifier() public {
@@ -284,6 +339,7 @@ contract AgentWorkOrderEscrowTest {
             address(token),
             1_000_000,
             uint64(block.timestamp + 1 days),
+            uint64(block.timestamp + 2 days),
             "ipfs://buyer-release-task"
         );
 
@@ -309,6 +365,7 @@ contract AgentWorkOrderEscrowTest {
             address(token),
             1_000_000,
             uint64(block.timestamp + 1 days),
+            uint64(block.timestamp + 2 days),
             "ipfs://zero-verifier-task"
         );
 
@@ -332,6 +389,7 @@ contract AgentWorkOrderEscrowTest {
             address(verifier),
             1 ether,
             uint64(block.timestamp + 1 days),
+            uint64(block.timestamp + 2 days),
             "ipfs://native-task"
         );
 
@@ -358,6 +416,7 @@ contract AgentWorkOrderEscrowTest {
             address(verifier),
             1 ether,
             uint64(block.timestamp + 1 days),
+            uint64(block.timestamp + 2 days),
             "ipfs://malicious-task"
         );
 
@@ -384,6 +443,7 @@ contract AgentWorkOrderEscrowTest {
             address(token),
             1_000_000,
             uint64(block.timestamp + 1 days),
+            uint64(block.timestamp + 2 days),
             "ipfs://unapproved"
         ) returns (uint256) {
             revert("unapproved create succeeded");
@@ -444,11 +504,12 @@ contract BuyerActor {
         address worker,
         address verifier,
         uint256 amount,
-        uint64 deadline,
+        uint64 workDeadline,
+        uint64 reviewDeadline,
         string calldata metadataURI
     ) external returns (uint256) {
         token.approve(address(escrow), amount);
-        return escrow.createWorkOrder(worker, verifier, address(token), amount, deadline, metadataURI);
+        return escrow.createWorkOrder(worker, verifier, address(token), amount, workDeadline, reviewDeadline, metadataURI);
     }
 
     function createNativeOrder(
@@ -456,10 +517,11 @@ contract BuyerActor {
         address worker,
         address verifier,
         uint256 amount,
-        uint64 deadline,
+        uint64 workDeadline,
+        uint64 reviewDeadline,
         string calldata metadataURI
     ) external payable returns (uint256) {
-        return escrow.createWorkOrder{value: amount}(worker, verifier, address(0), amount, deadline, metadataURI);
+        return escrow.createWorkOrder{value: amount}(worker, verifier, address(0), amount, workDeadline, reviewDeadline, metadataURI);
     }
 
     function tryRefund(AgentWorkOrderEscrow escrow, uint256 id) external returns (bool) {

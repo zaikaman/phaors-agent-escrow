@@ -41,9 +41,13 @@ type VerifierDecision = {
 const args = parseArgs();
 const escrowAddress = requireArg(args, "escrow") as `0x${string}`;
 const amount = parseAmount((args.amount as string | undefined) || "0.001", 18);
-const deadlineMinutes = Number((args["deadline-minutes"] as string | undefined) || "30");
-if (!Number.isFinite(deadlineMinutes) || deadlineMinutes <= 0) {
-  throw new Error("--deadline-minutes must be a positive number");
+const workDeadlineMinutes = Number((args["work-deadline-minutes"] as string | undefined) || (args["deadline-minutes"] as string | undefined) || "30");
+const reviewPeriodMinutes = Number((args["review-period-minutes"] as string | undefined) || "30");
+if (!Number.isFinite(workDeadlineMinutes) || workDeadlineMinutes <= 0) {
+  throw new Error("--work-deadline-minutes must be a positive number");
+}
+if (!Number.isFinite(reviewPeriodMinutes) || reviewPeriodMinutes <= 0) {
+  throw new Error("--review-period-minutes must be a positive number");
 }
 
 const planner = makeClientsFromPrivateKey(args, "PHAROS_PRIVATE_KEY");
@@ -51,7 +55,9 @@ const worker = makeClientsFromPrivateKey(args, "PHAROS_PRIVATE_KEY_2");
 const verifier = makeClientsFromPrivateKey(args, "PHAROS_PRIVATE_KEY_3");
 const publicClient = planner.publicClient;
 const network = planner.network;
-const deadline = BigInt(Math.floor(Date.now() / 1000) + Math.floor(deadlineMinutes * 60));
+const now = Math.floor(Date.now() / 1000);
+const workDeadline = BigInt(now + Math.floor(workDeadlineMinutes * 60));
+const reviewDeadline = BigInt(now + Math.floor((workDeadlineMinutes + reviewPeriodMinutes) * 60));
 const taskBrief = (args.task as string | undefined) ||
   "Produce a concise judge-facing explanation of why on-chain escrow matters for AI agent work markets on Pharos.";
 
@@ -220,7 +226,7 @@ const createTxHash = await planner.walletClient.writeContract({
   address: escrowAddress,
   abi: escrowAbi,
   functionName: "createWorkOrder",
-  args: [worker.account.address, verifier.account.address, zeroAddress(), amount, deadline, metadataURI],
+  args: [worker.account.address, verifier.account.address, zeroAddress(), amount, workDeadline, reviewDeadline, metadataURI],
   account: planner.account,
   value: amount,
 });

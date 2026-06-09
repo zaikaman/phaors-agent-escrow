@@ -4,12 +4,15 @@ import { escrowAbi, makeReadClient, parseArgs, requireArg } from "./config.js";
 const args = parseArgs();
 const { network, publicClient } = makeReadClient(args);
 const escrowAddress = requireArg(args, "escrow") as `0x${string}`;
-const deploymentTx = "0xb79589f425bc952edc30857cbeaed8d83c39cfc3ef16ad06b329be743fbbe611" as const;
+const deploymentTx = args["deployment-tx"] as `0x${string}` | undefined;
 const fromBlockArg = args["from-block"] as string | undefined;
 const scanAll = Boolean(args.all);
+if (scanAll && !fromBlockArg && !deploymentTx) {
+  throw new Error("Use --from-block <block> or --deployment-tx <hash> with --all.");
+}
 const latestBlock = await publicClient.getBlockNumber();
 const receipt = scanAll && !fromBlockArg
-  ? await publicClient.getTransactionReceipt({ hash: deploymentTx })
+  ? await publicClient.getTransactionReceipt({ hash: deploymentTx! })
   : undefined;
 const chunkSize = BigInt((args["chunk-size"] as string | undefined) || "1000");
 const defaultWindowStart = latestBlock > chunkSize ? latestBlock - chunkSize + 1n : 0n;

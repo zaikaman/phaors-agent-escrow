@@ -26,11 +26,11 @@ The bundled contract is `assets/AgentWorkOrderEscrow.sol`.
 
 Workflow:
 
-1. Buyer agent creates a work order and escrows native PHRS/PROS or ERC20.
+1. Buyer agent creates a work order with separate work and review deadlines, then escrows native PHRS/PROS or ERC20.
 2. Worker agent accepts the job, unless a designated worker was already set.
-3. Worker submits a completion proof URI or hash.
-4. Buyer or optional verifier releases payment.
-5. Buyer can refund expired work orders that were not released.
+3. Worker submits a completion proof URI or hash before the work deadline.
+4. Buyer or optional verifier releases payment during review.
+5. Buyer can refund open/accepted work after the work deadline, or submitted work after the review deadline.
 
 Use `references/workflows.md` for exact method signatures, status values, and safety rules.
 
@@ -49,10 +49,12 @@ Default to Atlantic testnet unless the user explicitly asks for mainnet.
 - Atlantic USDC: `0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8`
 - Native token: `PHRS` on Atlantic testnet, `PROS` on mainnet
 
-## Live Atlantic Deployment
+## Atlantic Deployment
 
-- `AgentWorkOrderEscrow`: `0x6f88b3c79325472f6439426e84c9303506661585`
-- Deployment transaction: `https://atlantic.pharosscan.xyz/tx/0xb79589f425bc952edc30857cbeaed8d83c39cfc3ef16ad06b329be743fbbe611`
+- Current split-deadline `AgentWorkOrderEscrow`: `0x047119bdf422fc82021b88cf679ddeddd500f128`
+- Current deployment transaction: `https://atlantic.pharosscan.xyz/tx/0x37bb393e45c6df5d6da4eef5a858cc289900cc05f5e3d7090839b8ccf9a9135d`
+- Legacy single-deadline `AgentWorkOrderEscrow`: `0x6f88b3c79325472f6439426e84c9303506661585`
+- Legacy deployment transaction: `https://atlantic.pharosscan.xyz/tx/0xb79589f425bc952edc30857cbeaed8d83c39cfc3ef16ad06b329be743fbbe611`
 
 For write actions, never hardcode private keys. Require `PRIVATE_KEY` in the environment and display the derived address before sending.
 
@@ -70,17 +72,17 @@ Common commands:
 
 ```bash
 npx tsx scripts/deploy.ts
-npx tsx scripts/create-work-order.ts --escrow <address> --asset native --amount 0.1 --deadline-minutes 60 --metadata "ipfs://..."
+npx tsx scripts/create-work-order.ts --escrow <address> --asset native --amount 0.1 --work-deadline-minutes 60 --review-period-minutes 60 --metadata "ipfs://..."
 npx tsx scripts/accept-submit-release.ts accept --escrow <address> --id 1
 npx tsx scripts/accept-submit-release.ts submit --escrow <address> --id 1 --proof "ipfs://..."
 npx tsx scripts/accept-submit-release.ts release --escrow <address> --id 1
 npx tsx scripts/status.ts --escrow <address> --id 1
-npx tsx scripts/demo-flow.ts --escrow <address> --amount 0.001
-npx tsx scripts/judge-demo.ts --escrow <address> --amount 0.001
-npx tsx scripts/verify-and-release.ts --escrow <address> --id 1
-npx tsx scripts/find-open-work.ts --escrow <address> --worker <workerAddress> --asset native --min-amount 0.001
-npx tsx scripts/events.ts --escrow <address>
-npx tsx scripts/reputation.ts --escrow <address> --agent <agentAddress> --asset native
+npx tsx scripts/demo-flow.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --amount 0.001
+npx tsx scripts/judge-demo.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --amount 0.001
+npx tsx scripts/verify-and-release.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --id 1
+npx tsx scripts/find-open-work.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset native --min-amount 0.001
+npx tsx scripts/events.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
+npx tsx scripts/reputation.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --agent <agentAddress> --asset native
 ```
 
 ## Judge Demo
@@ -96,7 +98,7 @@ The Reputation Agent is read-only. It summarizes the worker with contract reads 
 
 ## Worker Discovery
 
-Use `scripts/find-open-work.ts` when a worker agent needs to discover claimable jobs. It scans `WorkOrderCreated` events, confirms each candidate is still `Open`, filters by asset, minimum reward, deadline, and worker eligibility, then prints claimable jobs with explorer links and accept commands.
+Use `scripts/find-open-work.ts` when a worker agent needs to discover claimable jobs. It scans `WorkOrderCreated` events, confirms each candidate is still `Open`, filters by asset, minimum reward, work deadline, and worker eligibility, then prints claimable jobs with explorer links and accept commands.
 
 Use `--worker <address>` to show only open jobs or jobs designated for that worker. Use `--asset native`, `--asset <erc20Address>`, or omit it for all assets. Use `--all` to scan from deployment, or `--from-block <block>` for a known window.
 

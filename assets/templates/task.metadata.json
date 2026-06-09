@@ -11,7 +11,8 @@
     "Include source links and final recommendation"
   ],
   "outputFormat": "markdown",
-  "deadline": "2026-06-15T00:00:00Z",
+  "workDeadline": "2026-06-15T00:00:00Z",
+  "reviewDeadline": "2026-06-15T01:00:00Z",
   "artifactPolicy": {
     "storeResultAt": "ipfs://...",
     "includeSha256": true

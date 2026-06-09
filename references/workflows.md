@@ -4,8 +4,10 @@
 
 Atlantic testnet deployment:
 
-- Contract: `0x6f88b3c79325472f6439426e84c9303506661585`
-- Deploy tx: `https://atlantic.pharosscan.xyz/tx/0xb79589f425bc952edc30857cbeaed8d83c39cfc3ef16ad06b329be743fbbe611`
+- Current split-deadline contract: `0x047119bdf422fc82021b88cf679ddeddd500f128`
+- Current deploy tx: `https://atlantic.pharosscan.xyz/tx/0x37bb393e45c6df5d6da4eef5a858cc289900cc05f5e3d7090839b8ccf9a9135d`
+- Legacy single-deadline contract: `0x6f88b3c79325472f6439426e84c9303506661585`
+- Legacy deploy tx: `https://atlantic.pharosscan.xyz/tx/0xb79589f425bc952edc30857cbeaed8d83c39cfc3ef16ad06b329be743fbbe611`
 
 The contract exposes `Status` as a Solidity enum:
 
@@ -29,7 +31,8 @@ function createWorkOrder(
     address verifier,
     address asset,
     uint256 amount,
-    uint64 deadline,
+    uint64 workDeadline,
+    uint64 reviewDeadline,
     string calldata metadataURI
 ) external payable returns (uint256 id)
 ```
@@ -38,7 +41,8 @@ function createWorkOrder(
 - `verifier`: set to `address(0)` to let only the buyer release payment, or set an independent verifier.
 - `asset`: `address(0)` for native PHRS/PROS, otherwise an ERC20 token address.
 - `amount`: escrow amount in base units.
-- `deadline`: Unix timestamp after which the buyer can refund if payment was not released.
+- `workDeadline`: Unix timestamp by which a worker must accept and submit proof.
+- `reviewDeadline`: Unix timestamp after `workDeadline`; submitted work can be refunded only after this review window expires without release.
 - `metadataURI`: IPFS, HTTPS, or content hash describing objective and acceptance criteria.
 - Native escrow requires `msg.value == amount`.
 - ERC20 escrow requires prior `approve(escrowAddress, amount)`.
@@ -52,6 +56,7 @@ function acceptWorkOrder(uint256 id) external
 - Only works while status is `Open`.
 - If a worker was designated, only that worker can accept.
 - If no worker was designated, caller becomes the worker.
+- Acceptance must happen before `workDeadline`.
 - Worker agents can discover claimable jobs with `scripts/find-open-work.ts`.
 
 ```powershell
@@ -65,6 +70,7 @@ function submitProof(uint256 id, string calldata proofURI) external
 ```
 
 - Only the accepted worker can submit proof.
+- Submission must happen before `workDeadline`.
 - `proofURI` should identify the delivered artifact and include hashes where possible.
 
 ### releasePayment
@@ -90,8 +96,9 @@ Add `--dry-run` to validate without releasing funds.
 function refundExpired(uint256 id) external
 ```
 
-- Callable only by the buyer after `deadline`.
-- Works for `Open`, `Accepted`, or `Submitted` orders.
+- Callable only by the buyer.
+- Works for `Open` and `Accepted` orders after `workDeadline`.
+- Works for `Submitted` orders only after `reviewDeadline`, giving buyers/verifiers a fair review window.
 - Sends escrowed funds back to the buyer.
 
 ### cancelOpen
@@ -121,12 +128,16 @@ Use JSON for demo clarity:
   "title": "Summarize Pharos SPN docs",
   "buyerAgent": "planner-agent-alpha",
   "workerAgent": "research-agent-beta",
+  "verifierAgent": "review-agent-gamma",
+  "objective": "Produce a concise markdown brief for a Phase 2 agent builder.",
   "acceptanceCriteria": [
     "Summarize SPN purpose",
     "Explain why it matters for agent infrastructure",
     "Return source links"
   ],
-  "outputFormat": "markdown"
+  "outputFormat": "markdown",
+  "workDeadline": "2026-06-15T00:00:00Z",
+  "reviewDeadline": "2026-06-15T01:00:00Z"
 }
 ```
 

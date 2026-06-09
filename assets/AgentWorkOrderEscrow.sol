@@ -23,7 +23,8 @@ contract AgentWorkOrderEscrow {
         address verifier;
         address asset;
         uint256 amount;
-        uint64 deadline;
+        uint64 workDeadline;
+        uint64 reviewDeadline;
         uint64 createdAt;
         uint64 acceptedAt;
         uint64 submittedAt;
@@ -56,7 +57,8 @@ contract AgentWorkOrderEscrow {
         address verifier,
         address asset,
         uint256 amount,
-        uint64 deadline,
+        uint64 workDeadline,
+        uint64 reviewDeadline,
         string metadataURI
     );
     event WorkOrderAccepted(uint256 indexed id, address indexed worker);
@@ -72,8 +74,9 @@ contract AgentWorkOrderEscrow {
     error InvalidProof();
     error InvalidStatus(Status actual);
     error Unauthorized();
-    error DeadlinePassed();
-    error DeadlineNotPassed();
+    error WorkDeadlinePassed();
+    error WorkDeadlineNotPassed();
+    error ReviewDeadlineNotPassed();
     error NativeAmountMismatch();
     error NativeTransferFailed();
     error TokenTransferFailed();
@@ -91,12 +94,13 @@ contract AgentWorkOrderEscrow {
         address verifier,
         address asset,
         uint256 amount,
-        uint64 deadline,
+        uint64 workDeadline,
+        uint64 reviewDeadline,
         string calldata metadataURI
     ) external payable nonReentrant returns (uint256 id) {
         if (amount == 0) revert InvalidAmount();
         uint64 currentTime = uint64(block.timestamp);
-        if (deadline <= currentTime) revert InvalidDeadline();
+        if (workDeadline <= currentTime || reviewDeadline <= workDeadline) revert InvalidDeadline();
         if (bytes(metadataURI).length == 0) revert InvalidMetadata();
 
         if (asset == address(0)) {
@@ -113,7 +117,8 @@ contract AgentWorkOrderEscrow {
             verifier: verifier,
             asset: asset,
             amount: amount,
-            deadline: deadline,
+            workDeadline: workDeadline,
+            reviewDeadline: reviewDeadline,
             createdAt: currentTime,
             acceptedAt: 0,
             submittedAt: 0,
@@ -124,14 +129,14 @@ contract AgentWorkOrderEscrow {
 
         agentStats[msg.sender].posted += 1;
 
-        emit WorkOrderCreated(id, msg.sender, worker, verifier, asset, amount, deadline, metadataURI);
+        emit WorkOrderCreated(id, msg.sender, worker, verifier, asset, amount, workDeadline, reviewDeadline, metadataURI);
     }
 
     function acceptWorkOrder(uint256 id) external {
         WorkOrder storage order = _existingOrder(id);
         if (order.status != Status.Open) revert InvalidStatus(order.status);
         uint64 currentTime = uint64(block.timestamp);
-        if (currentTime > order.deadline) revert DeadlinePassed();
+        if (currentTime > order.workDeadline) revert WorkDeadlinePassed();
         if (order.worker != address(0) && order.worker != msg.sender) revert Unauthorized();
 
         order.worker = msg.sender;
@@ -147,6 +152,7 @@ contract AgentWorkOrderEscrow {
         WorkOrder storage order = _existingOrder(id);
         if (order.status != Status.Accepted) revert InvalidStatus(order.status);
         if (order.worker != msg.sender) revert Unauthorized();
+        if (uint64(block.timestamp) > order.workDeadline) revert WorkDeadlinePassed();
         if (bytes(proofURI).length == 0) revert InvalidProof();
 
         order.proofURI = proofURI;
@@ -177,12 +183,11 @@ contract AgentWorkOrderEscrow {
         WorkOrder storage order = _existingOrder(id);
         if (msg.sender != order.buyer) revert Unauthorized();
         uint64 currentTime = uint64(block.timestamp);
-        if (currentTime <= order.deadline) revert DeadlineNotPassed();
-        if (
-            order.status != Status.Open &&
-            order.status != Status.Accepted &&
-            order.status != Status.Submitted
-        ) {
+        if (order.status == Status.Open || order.status == Status.Accepted) {
+            if (currentTime <= order.workDeadline) revert WorkDeadlineNotPassed();
+        } else if (order.status == Status.Submitted) {
+            if (currentTime <= order.reviewDeadline) revert ReviewDeadlineNotPassed();
+        } else {
             revert InvalidStatus(order.status);
         }
 
