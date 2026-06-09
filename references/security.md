@@ -16,6 +16,7 @@ This Skill is built as a production-style hackathon primitive, but it is not a s
 
 - Work and review deadlines use block timestamps. This is appropriate for escrow expiry windows measured in minutes or hours, not second-level precision.
 - Metadata and proof contents are referenced by URI. Agents should include hashes in the referenced JSON when integrity matters.
+- Task and proof metadata are validated against JSON Schemas before create and release flows proceed.
 - Disputes are intentionally simple: the buyer or configured verifier controls release. The buyer can refund open/accepted work after `workDeadline`, while submitted work remains reviewable until `reviewDeadline`.
 - The aggregate `volumeReleased` stat mixes units across assets. Use `getAgentAssetVolumeReleased(agent, asset)` for precise asset-level reputation.
 
@@ -38,5 +39,7 @@ npm ci
 & "$env:USERPROFILE\.foundry\bin\forge.exe" build
 & "$env:USERPROFILE\.foundry\bin\forge.exe" test
 npx tsc --noEmit
+npm run validate-metadata -- --kind task --file .\assets\templates\task.metadata.json
+npm run validate-metadata -- --kind proof --file .\assets\templates\proof.metadata.json
 python C:\Users\admin\.codex\skills\.system\skill-creator\scripts\quick_validate.py .
 ```

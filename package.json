@@ -10,6 +10,7 @@
     "create": "tsx scripts/create-work-order.ts",
     "work": "tsx scripts/accept-submit-release.ts",
     "status": "tsx scripts/status.ts",
+    "validate-metadata": "tsx scripts/validate-metadata.ts",
     "demo": "tsx scripts/demo-flow.ts",
     "judge-demo": "tsx scripts/judge-demo.ts",
     "judge-demo-usdc": "tsx scripts/judge-demo.ts --asset usdc --amount 1",
@@ -19,6 +20,7 @@
     "reputation": "tsx scripts/reputation.ts"
   },
   "dependencies": {
+    "ajv": "^8.20.0",
     "dotenv": "^16.4.7",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3",

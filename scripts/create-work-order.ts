@@ -8,6 +8,8 @@ import {
   waitAndPrint,
   zeroAddress,
 } from "./config.js";
+import { fileURLToPath } from "node:url";
+import { readJson, validateTaskMetadata } from "./metadata-validation.js";
 
 const args = parseArgs();
 const { account, network, publicClient, walletClient } = makeClients(args);
@@ -16,6 +18,7 @@ const escrowAddress = requireArg(args, "escrow") as `0x${string}`;
 const assetArg = requireArg(args, "asset");
 const humanAmount = requireArg(args, "amount");
 const metadataURI = requireArg(args, "metadata");
+const metadataFile = args["metadata-file"] as string | undefined;
 const worker = ((args.worker as string | undefined) || zeroAddress()) as `0x${string}`;
 const verifier = ((args.verifier as string | undefined) || zeroAddress()) as `0x${string}`;
 const workDeadlineMinutes = Number((args["work-deadline-minutes"] as string | undefined) || (args["deadline-minutes"] as string | undefined) || "60");
@@ -32,6 +35,8 @@ const workDeadline = BigInt(now + Math.floor(workDeadlineMinutes * 60));
 const reviewDeadline = BigInt(now + Math.floor((workDeadlineMinutes + reviewPeriodMinutes) * 60));
 const asset = assetArg === "native" ? zeroAddress() : (assetArg as `0x${string}`);
 let amount: bigint;
+
+validateMetadataBeforeCreate(metadataURI, metadataFile);
 
 if (assetArg === "native") {
   amount = parseAmount(humanAmount, 18);
@@ -72,3 +77,20 @@ const hash = await walletClient.writeContract({
 });
 
 await waitAndPrint(publicClient, network, hash);
+
+function validateMetadataBeforeCreate(uri: string, explicitPath?: string) {
+  const localPath = explicitPath || localPathFromUri(uri);
+  if (!localPath) {
+    throw new Error(
+      "Task metadata must be validated before creating a work order. Pass --metadata-file <path> for ipfs://, https://, http://, or sha256: metadata URIs."
+    );
+  }
+  validateTaskMetadata(readJson(localPath));
+  console.log(`validated task metadata: ${localPath}`);
+}
+
+function localPathFromUri(uri: string) {
+  if (uri.startsWith("file://")) return fileURLToPath(uri);
+  if (/^(ipfs:\/\/|https:\/\/|http:\/\/|sha256:)/.test(uri)) return undefined;
+  return uri;
+}

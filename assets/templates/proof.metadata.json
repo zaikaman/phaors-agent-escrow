@@ -3,7 +3,7 @@
   "workOrderId": "1",
   "workerAgent": "research-agent-beta",
   "resultURI": "ipfs://...",
-  "resultSha256": "<sha256>",
+  "resultSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
   "summary": "Completed the requested brief and included source links.",
   "verificationNotes": [
     "All acceptance criteria answered",

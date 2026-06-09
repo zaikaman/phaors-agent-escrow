@@ -13,10 +13,16 @@ import {
   waitAndPrint,
   zeroAddress,
 } from "./config.js";
+import {
+  validateProofMetadata,
+  validateTaskMetadata,
+  type ProofMetadata,
+  type TaskMetadata,
+} from "./metadata-validation.js";
 
 type AgentRole = "Planner Agent" | "Worker Agent" | "Verifier Agent";
 
-type PlannerTask = {
+type PlannerTaskDraft = {
   title: string;
   objective: string;
   acceptanceCriteria: string[];
@@ -26,7 +32,7 @@ type PlannerTask = {
   verifierAgent: string;
 };
 
-type WorkerProof = {
+type WorkerProofDraft = {
   resultSummary: string;
   deliveredArtifact: string;
   criteriaResults: { criterion: string; evidence: string; passed: boolean }[];
@@ -147,7 +153,7 @@ function extractResponseText(body: unknown): string {
   return chunks.join("\n").trim();
 }
 
-function validatePlannerTask(task: PlannerTask) {
+function validatePlannerTaskDraft(task: PlannerTaskDraft) {
   if (!task.title || !task.objective || !Array.isArray(task.acceptanceCriteria) || task.acceptanceCriteria.length < 3) {
     throw new Error("Planner Agent returned an invalid task shape.");
   }
@@ -156,7 +162,7 @@ function validatePlannerTask(task: PlannerTask) {
   }
 }
 
-function validateWorkerProof(proof: WorkerProof, task: PlannerTask) {
+function validateWorkerProofDraft(proof: WorkerProofDraft, task: TaskMetadata) {
   if (!proof.resultSummary || !proof.deliveredArtifact || !Array.isArray(proof.criteriaResults)) {
     throw new Error("Worker Agent returned an invalid proof shape.");
   }
@@ -249,7 +255,7 @@ console.log(`amount: ${formatUnits(amount, assetDecimals)} ${assetLabel}`);
 await printBalances();
 
 console.log("\n1. Planner Agent creates task metadata with Groq");
-const task = await callGroq<PlannerTask>(
+const taskDraft = await callGroq<PlannerTaskDraft>(
   "Planner Agent",
   `You are Planner Agent for a Pharos on-chain work-order escrow demo.
 Return only valid JSON with keys title, objective, acceptanceCriteria, outputFormat, buyerAgent, workerAgent, verifierAgent.
@@ -259,7 +265,18 @@ Worker wallet: ${worker.account.address}
 Verifier wallet: ${verifier.account.address}
 Task brief: ${taskBrief}`
 );
-validatePlannerTask(task);
+validatePlannerTaskDraft(taskDraft);
+const task: TaskMetadata = {
+  schema: "pharos-agent-escrow/task/v1",
+  ...taskDraft,
+  workDeadline: new Date(Number(workDeadline) * 1000).toISOString().replace(".000Z", "Z"),
+  reviewDeadline: new Date(Number(reviewDeadline) * 1000).toISOString().replace(".000Z", "Z"),
+  artifactPolicy: {
+    storeResultAt: "sha256:local-demo-artifact",
+    includeSha256: true,
+  },
+};
+validateTaskMetadata(task);
 const taskHash = sha256Json(task);
 const metadataURI = hashUri(taskHash);
 console.log(`  task: ${task.title}`);
@@ -304,7 +321,7 @@ const acceptHash = await worker.walletClient.writeContract({
 await waitAndPrint(publicClient, network, acceptHash);
 
 console.log("\n3. Worker Agent performs the task with Groq and submits proof");
-const proof = await callGroq<WorkerProof>(
+const proofDraft = await callGroq<WorkerProofDraft>(
   "Worker Agent",
   `You are Worker Agent completing this paid Pharos task.
 Return only valid JSON with keys resultSummary, deliveredArtifact, criteriaResults, verificationNotes.
@@ -312,7 +329,18 @@ criteriaResults must be an array of objects with criterion, evidence, and passed
 Task metadata JSON:
 ${JSON.stringify(task, null, 2)}`
 );
-validateWorkerProof(proof, task);
+validateWorkerProofDraft(proofDraft, task);
+const proof: ProofMetadata = {
+  schema: "pharos-agent-escrow/proof/v1",
+  workOrderId: id.toString(),
+  workerAgent: task.workerAgent,
+  deliveredArtifact: proofDraft.deliveredArtifact,
+  summary: proofDraft.resultSummary,
+  criteriaResults: proofDraft.criteriaResults,
+  verificationNotes: proofDraft.verificationNotes,
+  submittedAt: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
+};
+validateProofMetadata(proof);
 const proofHash = sha256Json(proof);
 const proofURI = hashUri(proofHash);
 console.log(`  proofURI: ${proofURI}`);

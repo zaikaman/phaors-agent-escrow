@@ -121,7 +121,19 @@ function nextWorkOrderId() external view returns (uint256)
 
 ## Demo Metadata Shape
 
-Use JSON for demo clarity:
+Use JSON for demo clarity. Task and proof metadata are validated against:
+
+- `assets/schemas/task.schema.json`
+- `assets/schemas/proof.schema.json`
+
+Validate local files with:
+
+```powershell
+npm run validate-metadata -- --kind task --file .\assets\templates\task.metadata.json
+npm run validate-metadata -- --kind proof --file .\assets\templates\proof.metadata.json
+```
+
+Task example:
 
 ```json
 {
@@ -140,6 +152,8 @@ Use JSON for demo clarity:
   "reviewDeadline": "2026-06-15T01:00:00Z"
 }
 ```
+
+When creating a work order with `ipfs://`, `https://`, `http://`, or `sha256:` metadata, pass `--metadata-file <path>` so the script can validate the local JSON before sending the transaction. `verify-and-release` validates loaded task and proof JSON again before any release transaction.
 
 ## Safety Rules
 

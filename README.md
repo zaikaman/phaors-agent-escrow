@@ -16,6 +16,8 @@ Run local production checks:
 ```powershell
 & "$env:USERPROFILE\.foundry\bin\forge.exe" test
 npx tsc --noEmit
+npm run validate-metadata -- --kind task --file .\assets\templates\task.metadata.json
+npm run validate-metadata -- --kind proof --file .\assets\templates\proof.metadata.json
 python C:\Users\admin\.codex\skills\.system\skill-creator\scripts\quick_validate.py .
 ```
 
@@ -55,6 +57,7 @@ Reusable surfaces:
 - Native PHRS/PROS and ERC20 escrow support
 - Judge-ready Atlantic USDC flow with approve, escrow, verify, release, and asset-specific reputation
 - Task and proof metadata templates in `assets/templates/`
+- JSON Schemas in `assets/schemas/` with validation reused by create and release scripts
 - Worker discovery from `WorkOrderCreated` events
 - Split work/review deadlines so submitted proof gets a fair review window before refund
 - Groq-powered verifier policy before release
@@ -110,6 +113,13 @@ Verify and release submitted work:
 
 ```powershell
 npm run verify-and-release -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --id <workOrderId>
+```
+
+Validate metadata before using it:
+
+```powershell
+npm run validate-metadata -- --kind task --file .\assets\templates\task.metadata.json
+npm run validate-metadata -- --kind proof --file .\assets\templates\proof.metadata.json
 ```
 
 Dry-run verifier policy without sending a transaction:

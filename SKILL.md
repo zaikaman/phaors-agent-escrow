@@ -38,6 +38,8 @@ Metadata templates:
 
 - Task metadata: `assets/templates/task.metadata.json`
 - Proof metadata: `assets/templates/proof.metadata.json`
+- Task schema: `assets/schemas/task.schema.json`
+- Proof schema: `assets/schemas/proof.schema.json`
 
 ## Pharos Network Defaults
 
@@ -77,6 +79,8 @@ npx tsx scripts/accept-submit-release.ts accept --escrow <address> --id 1
 npx tsx scripts/accept-submit-release.ts submit --escrow <address> --id 1 --proof "ipfs://..."
 npx tsx scripts/accept-submit-release.ts release --escrow <address> --id 1
 npx tsx scripts/status.ts --escrow <address> --id 1
+npm run validate-metadata -- --kind task --file assets/templates/task.metadata.json
+npm run validate-metadata -- --kind proof --file assets/templates/proof.metadata.json
 npx tsx scripts/demo-flow.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --amount 0.001
 npx tsx scripts/judge-demo.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --amount 0.001
 npm run judge-demo-usdc -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
@@ -113,7 +117,7 @@ Use `scripts/verify-and-release.ts` when a buyer or verifier agent needs to chec
 
 - Reads the work order from-chain.
 - Loads task metadata and proof JSON from `https://`, `ipfs://`, `file://`, local paths, or `sha256:` content-addressed local artifacts.
-- Validates required fields, acceptance criteria, output format, and artifact evidence shape.
+- Validates task and proof JSON against `assets/schemas/`, then checks acceptance criteria, output format, and artifact evidence shape.
 - Calls Groq `qwen/qwen3-32b` for semantic review.
 - Sends `releasePayment` only when deterministic validation and Groq review both pass.
 

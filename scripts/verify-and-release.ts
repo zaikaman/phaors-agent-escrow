@@ -11,6 +11,10 @@ import {
   waitAndPrint,
   zeroAddress,
 } from "./config.js";
+import {
+  validateProofMetadata as validateProofMetadataSchema,
+  validateTaskMetadata as validateTaskMetadataSchema,
+} from "./metadata-validation.js";
 
 type JsonObject = Record<string, unknown>;
 
@@ -300,6 +304,8 @@ const metadataFile = args["metadata-file"] as string | undefined;
 const proofFile = args["proof-file"] as string | undefined;
 const loadedMetadata = await loadJsonFromUri(order.metadataURI, "metadata", metadataFile);
 const loadedProof = await loadJsonFromUri(order.proofURI, "proof", proofFile);
+validateTaskMetadataSchema(loadedMetadata.json);
+validateProofMetadataSchema(loadedProof.json);
 const normalizedTask = validateTaskMetadata(loadedMetadata.json);
 const normalizedProof = validateProof(loadedProof.json);
 
