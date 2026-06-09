@@ -76,6 +76,7 @@ npx tsx scripts/accept-submit-release.ts release --escrow <address> --id 1
 npx tsx scripts/status.ts --escrow <address> --id 1
 npx tsx scripts/demo-flow.ts --escrow <address> --amount 0.001
 npx tsx scripts/judge-demo.ts --escrow <address> --amount 0.001
+npx tsx scripts/verify-and-release.ts --escrow <address> --id 1
 npx tsx scripts/events.ts --escrow <address>
 npx tsx scripts/reputation.ts --escrow <address> --agent <agentAddress> --asset native
 ```
@@ -90,6 +91,18 @@ Use `scripts/judge-demo.ts` for the full Phase 1 walkthrough. It uses three fund
 - `GROQ_API_KEY`: Groq Responses API key.
 
 The Reputation Agent is read-only. It summarizes the worker with contract reads after release.
+
+## Verifier Policy
+
+Use `scripts/verify-and-release.ts` when a buyer or verifier agent needs to check a submitted proof before release. It:
+
+- Reads the work order from-chain.
+- Loads task metadata and proof JSON from `https://`, `ipfs://`, `file://`, local paths, or `sha256:` content-addressed local artifacts.
+- Validates required fields, acceptance criteria, output format, and artifact evidence shape.
+- Calls Groq `qwen/qwen3-32b` for semantic review.
+- Sends `releasePayment` only when deterministic validation and Groq review both pass.
+
+Use `--dry-run` to validate without sending a transaction. Use `--release-env <ENV_NAME>` to choose the signing wallet; default is `PHAROS_PRIVATE_KEY_3`.
 
 ## Agent Guidance
 

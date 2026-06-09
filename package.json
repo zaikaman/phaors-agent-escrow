@@ -12,6 +12,7 @@
     "status": "tsx scripts/status.ts",
     "demo": "tsx scripts/demo-flow.ts",
     "judge-demo": "tsx scripts/judge-demo.ts",
+    "verify-and-release": "tsx scripts/verify-and-release.ts",
     "events": "tsx scripts/events.ts",
     "reputation": "tsx scripts/reputation.ts"
   },
@@ -22,6 +23,6 @@
     "viem": "^2.21.54"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0"
+    "@types/node": "^24.13.1"
   }
 }

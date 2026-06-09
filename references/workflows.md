@@ -71,6 +71,13 @@ function releasePayment(uint256 id) external
 - Callable by the buyer or the configured verifier.
 - Requires status `Submitted`.
 - Sends escrowed funds to the worker.
+- For agent-driven releases, prefer `scripts/verify-and-release.ts` so metadata, proof shape, acceptance criteria, artifact evidence, and Groq semantic review all pass before the transaction is sent.
+
+```powershell
+npx tsx scripts/verify-and-release.ts --network atlantic-testnet --escrow <address> --id <workOrderId>
+```
+
+Add `--dry-run` to validate without releasing funds.
 
 ### refundExpired
 

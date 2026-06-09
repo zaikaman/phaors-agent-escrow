@@ -39,6 +39,20 @@ Flow:
 
 The script writes generated task, proof, and verifier decision JSON to `demo-artifacts/<workOrderId>/`.
 
+## Standalone Verifier Release
+
+Use this when a work order is already in `Submitted` status and the verifier should decide whether to release funds:
+
+```powershell
+npx tsx scripts/verify-and-release.ts --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --id <workOrderId>
+```
+
+For a no-transaction validation pass:
+
+```powershell
+npx tsx scripts/verify-and-release.ts --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --id <workOrderId> --dry-run
+```
+
 ## Inspect Events
 
 ```powershell
