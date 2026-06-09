@@ -17,6 +17,7 @@ export const networks = {
     rpcUrl: "https://atlantic.dplabs-internal.com",
     explorerUrl: "https://atlantic.pharosscan.xyz",
     nativeToken: "PHRS",
+    usdcAddress: "0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8",
   },
   mainnet: {
     name: "mainnet",
@@ -24,6 +25,7 @@ export const networks = {
     rpcUrl: "https://rpc.pharos.xyz",
     explorerUrl: "https://www.pharosscan.xyz",
     nativeToken: "PROS",
+    usdcAddress: undefined,
   },
 } as const;
 
@@ -221,6 +223,13 @@ export const erc20Abi = [
       { name: "amount", type: "uint256" },
     ],
     outputs: [{ name: "", type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "balanceOf",
+    stateMutability: "view",
+    inputs: [{ name: "account", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
   },
   {
     type: "function",

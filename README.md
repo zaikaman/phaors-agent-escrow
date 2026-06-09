@@ -31,10 +31,10 @@ Run the one-wallet lifecycle demo:
 npm run demo -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --amount 0.001
 ```
 
-Run the judge-grade three-agent Groq demo:
+Run the judge-grade three-agent USDC Groq demo:
 
 ```powershell
-npm run judge-demo -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --amount 0.001
+npm run judge-demo-usdc -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
 ```
 
 Required for the three-agent demo:
@@ -43,6 +43,7 @@ Required for the three-agent demo:
 - `PHAROS_PRIVATE_KEY_2`: Worker Agent wallet
 - `PHAROS_PRIVATE_KEY_3`: Verifier Agent wallet
 - `GROQ_API_KEY`: Groq API key for `qwen/qwen3-32b`
+- Planner wallet needs Atlantic USDC for `judge-demo-usdc`; all three wallets need native PHRS for gas.
 
 ## What Makes This Reusable
 
@@ -52,6 +53,7 @@ Reusable surfaces:
 
 - On-chain work-order state machine in `assets/AgentWorkOrderEscrow.sol`
 - Native PHRS/PROS and ERC20 escrow support
+- Judge-ready Atlantic USDC flow with approve, escrow, verify, release, and asset-specific reputation
 - Task and proof metadata templates in `assets/templates/`
 - Worker discovery from `WorkOrderCreated` events
 - Split work/review deadlines so submitted proof gets a fair review window before refund
@@ -81,7 +83,7 @@ See `agents/planner-worker-verifier-demo.md` for a polished Phase 2 mini-agent c
 - Explorer: `https://atlantic.pharosscan.xyz`
 - Legacy deployment tx: https://atlantic.pharosscan.xyz/tx/0xb79589f425bc952edc30857cbeaed8d83c39cfc3ef16ad06b329be743fbbe611
 
-Recent successful three-agent demo transactions:
+Recent successful legacy native three-agent demo transactions:
 
 - Create work order: https://atlantic.pharosscan.xyz/tx/0x7e5839ee4d7131fc0308ca0d55cb1920ace4c65ac7bad588761ac0682e5456d0
 - Worker accept: https://atlantic.pharosscan.xyz/tx/0x56586e99c790d4837b5e1e85e3981416c8654023fe4e8a9ea988d55cf5c476ac
@@ -90,10 +92,18 @@ Recent successful three-agent demo transactions:
 
 ## Judge Commands
 
+Run the recommended USDC work-order lifecycle:
+
+```powershell
+npm run judge-demo-usdc -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
+```
+
+The USDC demo performs ERC20 approval, creates a funded work order, accepts, submits proof, verifies with Groq, releases payment, and prints worker reputation for the selected asset.
+
 Find claimable work:
 
 ```powershell
-npm run find-open-work -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset native --min-amount 0.001
+npm run find-open-work -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8 --min-amount 1
 ```
 
 Verify and release submitted work:
@@ -112,7 +122,7 @@ Inspect events and worker reputation:
 
 ```powershell
 npm run events -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
-npm run reputation -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --agent <agentAddress> --asset native
+npm run reputation -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --agent <agentAddress> --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8
 ```
 
 ## Why This Can Win

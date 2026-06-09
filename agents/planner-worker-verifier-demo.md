@@ -26,12 +26,13 @@ This runbook shows how a Phase 2 agent marketplace can compose `pharos-agent-esc
 Run the complete three-agent flow:
 
 ```powershell
-npm run judge-demo -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --amount 0.001
+npm run judge-demo-usdc -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
 ```
 
 This produces:
 
 - Planner-generated task metadata
+- ERC20 approval for Atlantic USDC escrow funding
 - On-chain escrow funding
 - Worker acceptance and proof submission
 - Verifier release decision using Groq `qwen/qwen3-32b`
@@ -45,13 +46,13 @@ A marketplace agent can run each stage independently.
 Planner creates a paid job:
 
 ```powershell
-npm run create -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --asset native --amount 0.001 --work-deadline-minutes 60 --review-period-minutes 60 --metadata <taskMetadataURI> --worker <optionalWorkerAddress> --verifier <verifierAddress>
+npm run create -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8 --amount 1 --work-deadline-minutes 60 --review-period-minutes 60 --metadata <taskMetadataURI> --worker <optionalWorkerAddress> --verifier <verifierAddress>
 ```
 
 Worker discovers claimable jobs:
 
 ```powershell
-npm run find-open-work -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset native --min-amount 0.001
+npm run find-open-work -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8 --min-amount 1
 ```
 
 Worker accepts and submits proof:
@@ -70,7 +71,7 @@ npm run verify-and-release -- --network atlantic-testnet --escrow 0x047119bdf422
 Reputation Agent ranks the worker:
 
 ```powershell
-npm run reputation -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --agent <workerAddress> --asset native
+npm run reputation -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --agent <workerAddress> --asset 0xE0BE08c77f415F577A1B3A9aD7a1Df1479564ec8
 ```
 
 ## Routing Policy Example

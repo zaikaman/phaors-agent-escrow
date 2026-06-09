@@ -79,6 +79,7 @@ npx tsx scripts/accept-submit-release.ts release --escrow <address> --id 1
 npx tsx scripts/status.ts --escrow <address> --id 1
 npx tsx scripts/demo-flow.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --amount 0.001
 npx tsx scripts/judge-demo.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --amount 0.001
+npm run judge-demo-usdc -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
 npx tsx scripts/verify-and-release.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --id 1
 npx tsx scripts/find-open-work.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --worker <workerAddress> --asset native --min-amount 0.001
 npx tsx scripts/events.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
@@ -87,12 +88,16 @@ npx tsx scripts/reputation.ts --escrow 0x047119bdf422fc82021b88cf679ddeddd500f12
 
 ## Judge Demo
 
-Use `scripts/judge-demo.ts` for the full Phase 1 walkthrough. It uses three funded wallets and real Groq LLM calls:
+Use `npm run judge-demo-usdc` for the strongest Phase 1 walkthrough. It uses Atlantic USDC, three funded wallets, ERC20 approval, on-chain escrow, proof verification, release, and asset-specific reputation. Use `scripts/judge-demo.ts --asset native` for the simpler native-token variant.
+
+The USDC demo uses three funded wallets and real Groq LLM calls:
 
 - `PHAROS_PRIVATE_KEY`: Planner Agent, creates and funds the work order.
 - `PHAROS_PRIVATE_KEY_2`: Worker Agent, accepts and submits proof.
 - `PHAROS_PRIVATE_KEY_3`: Verifier Agent, checks proof and releases payment.
 - `GROQ_API_KEY`: Groq Responses API key.
+
+For `judge-demo-usdc`, the Planner Agent wallet must hold Atlantic USDC and native PHRS for approve/create gas. Worker and Verifier wallets need native PHRS for accept, submit, and release gas.
 
 The Reputation Agent is read-only. It summarizes the worker with contract reads after release.
 

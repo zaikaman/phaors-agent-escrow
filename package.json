@@ -12,6 +12,7 @@
     "status": "tsx scripts/status.ts",
     "demo": "tsx scripts/demo-flow.ts",
     "judge-demo": "tsx scripts/judge-demo.ts",
+    "judge-demo-usdc": "tsx scripts/judge-demo.ts --asset usdc --amount 1",
     "verify-and-release": "tsx scripts/verify-and-release.ts",
     "find-open-work": "tsx scripts/find-open-work.ts",
     "events": "tsx scripts/events.ts",

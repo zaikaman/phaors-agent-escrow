@@ -14,28 +14,31 @@ npx tsx scripts/demo-flow.ts --network atlantic-testnet --escrow 0x047119bdf422f
 
 The script prints transaction hashes and explorer links for create, accept, submit, and release.
 
-## Judge-Grade Three-Agent Demo
+## Judge-Grade USDC Three-Agent Demo
 
-This is the recommended live judging flow. It uses three funded wallets and real Groq LLM calls:
+This is the recommended live judging flow. It uses Atlantic USDC, three funded wallets, ERC20 approval, on-chain escrow, real Groq LLM calls, and asset-specific reputation:
 
 - `PHAROS_PRIVATE_KEY`: Planner Agent
 - `PHAROS_PRIVATE_KEY_2`: Worker Agent
 - `PHAROS_PRIVATE_KEY_3`: Verifier Agent
 - `GROQ_API_KEY`: Groq Responses API key
 
+The Planner Agent wallet must hold Atlantic USDC and native PHRS for approval and create gas. Worker and Verifier wallets need native PHRS for accept, submit, and release gas.
+
 ```powershell
 cd D:\pharos-hackathon\pharos-agent-escrow
 npm ci
-npm run judge-demo -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --amount 0.001
+npm run judge-demo-usdc -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
 ```
 
 Flow:
 
 1. Planner Agent asks Groq to create task metadata and funds the escrow.
-2. Worker Agent accepts the work order.
-3. Worker Agent asks Groq to produce the deliverable and submits a proof hash.
-4. Verifier Agent asks Groq to compare task metadata with proof, then releases payment if it passes.
-5. Reputation Agent reads worker stats and native volume released.
+2. Planner Agent approves USDC spending by the escrow contract.
+3. Worker Agent accepts the work order.
+4. Worker Agent asks Groq to produce the deliverable and submits a proof hash.
+5. Verifier Agent asks Groq to compare task metadata with proof, then releases payment if it passes.
+6. Reputation Agent reads worker stats and selected-asset volume released.
 
 The script writes generated task, proof, and verifier decision JSON to `demo-artifacts/<workOrderId>/`.
 

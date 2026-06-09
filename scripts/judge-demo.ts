@@ -2,8 +2,9 @@ import "dotenv/config";
 import { createHash as createCryptoHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { formatEther } from "viem";
+import { formatEther, formatUnits } from "viem";
 import {
+  erc20Abi,
   escrowAbi,
   makeClientsFromPrivateKey,
   parseAmount,
@@ -40,7 +41,7 @@ type VerifierDecision = {
 
 const args = parseArgs();
 const escrowAddress = requireArg(args, "escrow") as `0x${string}`;
-const amount = parseAmount((args.amount as string | undefined) || "0.001", 18);
+const assetArg = (args.asset as string | undefined) || "native";
 const workDeadlineMinutes = Number((args["work-deadline-minutes"] as string | undefined) || (args["deadline-minutes"] as string | undefined) || "30");
 const reviewPeriodMinutes = Number((args["review-period-minutes"] as string | undefined) || "30");
 if (!Number.isFinite(workDeadlineMinutes) || workDeadlineMinutes <= 0) {
@@ -55,6 +56,20 @@ const worker = makeClientsFromPrivateKey(args, "PHAROS_PRIVATE_KEY_2");
 const verifier = makeClientsFromPrivateKey(args, "PHAROS_PRIVATE_KEY_3");
 const publicClient = planner.publicClient;
 const network = planner.network;
+const asset = resolveAsset(assetArg);
+const assetDecimals = asset === zeroAddress()
+  ? 18
+  : await publicClient.readContract({
+      address: asset,
+      abi: erc20Abi,
+      functionName: "decimals",
+    });
+const amount = parseAmount((args.amount as string | undefined) || defaultAmountForAsset(asset), assetDecimals);
+const assetLabel = asset === zeroAddress()
+  ? network.nativeToken
+  : assetArg === "usdc"
+    ? "USDC"
+    : asset;
 const now = Math.floor(Date.now() / 1000);
 const workDeadline = BigInt(now + Math.floor(workDeadlineMinutes * 60));
 const reviewDeadline = BigInt(now + Math.floor((workDeadlineMinutes + reviewPeriodMinutes) * 60));
@@ -67,6 +82,24 @@ function sha256Json(value: unknown) {
 
 function hashUri(hash: string) {
   return `sha256:${hash}`;
+}
+
+function resolveAsset(requested: string) {
+  if (requested === "native") return zeroAddress();
+  if (requested === "usdc") {
+    if (!network.usdcAddress) {
+      throw new Error(`Network ${network.name} does not define a USDC address. Pass --asset <erc20Address>.`);
+    }
+    return network.usdcAddress as `0x${string}`;
+  }
+  if (!/^0x[0-9a-fA-F]{40}$/.test(requested)) {
+    throw new Error("--asset must be native, usdc, or an ERC20 address.");
+  }
+  return requested as `0x${string}`;
+}
+
+function defaultAmountForAsset(resolvedAsset: `0x${string}`) {
+  return resolvedAsset === zeroAddress() ? "0.001" : "1";
 }
 
 function extractJsonObject<T>(text: string): T {
@@ -182,8 +215,23 @@ async function printBalances() {
   console.log(`  Worker Agent:   ${worker.account.address} (${formatEther(workerBalance)} ${network.nativeToken})`);
   console.log(`  Verifier Agent: ${verifier.account.address} (${formatEther(verifierBalance)} ${network.nativeToken})`);
 
-  if (plannerBalance <= amount) {
+  if (asset === zeroAddress() && plannerBalance <= amount) {
     throw new Error(`Planner Agent balance must exceed escrow amount ${formatEther(amount)} ${network.nativeToken}.`);
+  }
+  if (asset !== zeroAddress()) {
+    const plannerTokenBalance = await publicClient.readContract({
+      address: asset,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [planner.account.address],
+    });
+    console.log(`  Planner Agent ${assetLabel}: ${formatUnits(plannerTokenBalance, assetDecimals)}`);
+    if (plannerTokenBalance < amount) {
+      throw new Error(`Planner Agent needs at least ${formatUnits(amount, assetDecimals)} ${assetLabel}.`);
+    }
+    if (plannerBalance === 0n) {
+      throw new Error("Planner Agent needs native token for ERC20 approve and create gas.");
+    }
   }
   if (workerBalance === 0n) {
     throw new Error("Worker Agent needs native token for accept and submit gas.");
@@ -196,7 +244,8 @@ async function printBalances() {
 console.log("Pharos Agent Escrow judge demo");
 console.log(`network: ${network.name} (${network.chainId})`);
 console.log(`escrow: ${escrowAddress}`);
-console.log(`amount: ${formatEther(amount)} ${network.nativeToken}`);
+console.log(`asset: ${asset === zeroAddress() ? "native" : asset}`);
+console.log(`amount: ${formatUnits(amount, assetDecimals)} ${assetLabel}`);
 await printBalances();
 
 console.log("\n1. Planner Agent creates task metadata with Groq");
@@ -222,13 +271,25 @@ const id = await publicClient.readContract({
   functionName: "nextWorkOrderId",
 });
 
+if (asset !== zeroAddress()) {
+  console.log("\n1a. Planner Agent approves ERC20 escrow funding");
+  const approveHash = await planner.walletClient.writeContract({
+    address: asset,
+    abi: erc20Abi,
+    functionName: "approve",
+    args: [escrowAddress, amount],
+    account: planner.account,
+  });
+  await waitAndPrint(publicClient, network, approveHash);
+}
+
 const createTxHash = await planner.walletClient.writeContract({
   address: escrowAddress,
   abi: escrowAbi,
   functionName: "createWorkOrder",
-  args: [worker.account.address, verifier.account.address, zeroAddress(), amount, workDeadline, reviewDeadline, metadataURI],
+  args: [worker.account.address, verifier.account.address, asset, amount, workDeadline, reviewDeadline, metadataURI],
   account: planner.account,
-  value: amount,
+  value: asset === zeroAddress() ? amount : 0n,
 });
 await waitAndPrint(publicClient, network, createTxHash);
 
@@ -312,7 +373,7 @@ const [order, stats, assetVolume] = await Promise.all([
     address: escrowAddress,
     abi: escrowAbi,
     functionName: "getAgentAssetVolumeReleased",
-    args: [worker.account.address, zeroAddress()],
+    args: [worker.account.address, asset],
   }),
 ]);
 const accepted = Number(stats.accepted);
@@ -334,6 +395,9 @@ console.log(JSON.stringify(
     verifier: verifier.account.address,
     metadataURI: order.metadataURI,
     proofURI: order.proofURI,
+    asset: asset === zeroAddress() ? "native" : asset,
+    assetLabel,
+    amount: formatUnits(amount, assetDecimals),
     explorer: `${network.explorerUrl}/address/${escrowAddress}`,
     workerReputation: {
       accepted: stats.accepted.toString(),
@@ -341,7 +405,8 @@ console.log(JSON.stringify(
       completed: stats.completed.toString(),
       refunded: stats.refunded.toString(),
       completionRate,
-      nativeVolumeReleased: assetVolume.toString(),
+      selectedAssetVolumeReleased: assetVolume.toString(),
+      selectedAssetVolumeFormatted: formatUnits(assetVolume, assetDecimals),
     },
     localArtifacts: artifactDir,
   },
