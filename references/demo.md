@@ -7,7 +7,6 @@ Use this when a judge wants to see a full live cycle on Pharos Atlantic.
 This creates a native escrow order where the same wallet plays buyer, worker, and verifier. It proves the complete on-chain lifecycle without needing three funded wallets.
 
 ```powershell
-cd D:\pharos-hackathon\pharos-agent-escrow
 npm ci
 npx tsx scripts/demo-flow.ts --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --amount 0.001
 ```
@@ -19,7 +18,6 @@ The script prints transaction hashes and explorer links for create, accept, subm
 This is the repeatable composition demo for judges who want to see how the Skill becomes a marketplace agent loop:
 
 ```powershell
-cd D:\pharos-hackathon\pharos-agent-escrow
 npm ci
 npm run marketplace-demo -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128 --asset native --amount 0.001
 ```
@@ -38,7 +36,6 @@ This is the recommended live judging flow. It uses Atlantic USDC, three funded w
 The Planner Agent wallet must hold Atlantic USDC and native PHRS for approval and create gas. Worker and Verifier wallets need native PHRS for accept, submit, and release gas.
 
 ```powershell
-cd D:\pharos-hackathon\pharos-agent-escrow
 npm ci
 npm run judge-demo-usdc -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
 ```

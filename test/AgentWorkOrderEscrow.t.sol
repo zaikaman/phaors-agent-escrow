@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "../assets/AgentWorkOrderEscrow.sol";
-import "../assets/MockERC20.sol";
+import "./MockERC20.sol";
 
 interface Vm {
     function warp(uint256 newTimestamp) external;

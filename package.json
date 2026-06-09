@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "forge build",
-    "test": "forge test",
+    "build": "tsx scripts/foundry.ts build",
+    "test": "tsx scripts/foundry.ts test",
     "deploy": "tsx scripts/deploy.ts",
     "create": "tsx scripts/create-work-order.ts",
     "work": "tsx scripts/accept-submit-release.ts",

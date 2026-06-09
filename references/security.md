@@ -34,10 +34,9 @@ This Skill is built as a production-style hackathon primitive, but it is not a s
 Before submission or redeploy:
 
 ```powershell
-cd D:\pharos-hackathon\pharos-agent-escrow
 npm ci
-& "$env:USERPROFILE\.foundry\bin\forge.exe" build
-& "$env:USERPROFILE\.foundry\bin\forge.exe" test
+npm run build
+npm test
 npx tsc --noEmit
 npm run validate-metadata -- --kind task --file .\assets\templates\task.metadata.json
 npm run validate-metadata -- --kind proof --file .\assets\templates\proof.metadata.json

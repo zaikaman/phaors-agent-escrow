@@ -4,17 +4,17 @@ Reusable Pharos Skill for agent-to-agent work orders. A planner agent escrows na
 
 ## Run This In 3 Minutes
 
-From the skill folder:
+From the repository root:
 
 ```powershell
-cd D:\pharos-hackathon\pharos-agent-escrow
 npm ci
 ```
 
 Run local production checks:
 
 ```powershell
-& "$env:USERPROFILE\.foundry\bin\forge.exe" test
+npm run build
+npm test
 npx tsc --noEmit
 npm run validate-metadata -- --kind task --file .\assets\templates\task.metadata.json
 npm run validate-metadata -- --kind proof --file .\assets\templates\proof.metadata.json
@@ -100,7 +100,46 @@ Recent successful legacy native three-agent demo transactions:
 - Submit proof: https://atlantic.pharosscan.xyz/tx/0x2eeaae0a680b3e5c3ffef1a044876afc75ecbf4a6d38d2d84f76ee703d013df4
 - Verifier release: https://atlantic.pharosscan.xyz/tx/0x5b7616536eff6e8de8d24fd5a9b21b4fbb0e5bda37e8be4dc1fc81eb0cc4bb07
 
-## Judge Commands
+## Judge Packet
+
+Recommended live command:
+
+```powershell
+npm run judge-demo-usdc -- --network atlantic-testnet --escrow 0x047119bdf422fc82021b88cf679ddeddd500f128
+```
+
+Required environment:
+
+- `PHAROS_PRIVATE_KEY`: Planner Agent wallet with Atlantic USDC and native PHRS for gas.
+- `PHAROS_PRIVATE_KEY_2`: Worker Agent wallet with native PHRS for gas.
+- `PHAROS_PRIVATE_KEY_3`: Verifier Agent wallet with native PHRS for gas.
+- `GROQ_API_KEY`: Groq API key for planner, worker, and verifier LLM calls.
+
+Expected output shape:
+
+- Wallet, network, escrow, asset, and amount summary.
+- ERC20 approval transaction link.
+- Work-order creation, accept, submit-proof, and release transaction links.
+- Verifier decision and rationale.
+- Final JSON transcript containing `workOrderId`, `finalStatus`, `metadataURI`, `proofURI`, `transactions`, `workerReputation`, and `localArtifacts`.
+
+Deployed contract:
+
+- Atlantic testnet split-deadline escrow: `0x047119bdf422fc82021b88cf679ddeddd500f128`
+- Deployment transaction: https://atlantic.pharosscan.xyz/tx/0x37bb393e45c6df5d6da4eef5a858cc289900cc05f5e3d7090839b8ccf9a9135d
+
+Recent successful current-contract transaction links:
+
+- Create work order: https://atlantic.pharosscan.xyz/tx/0xa067bfbbe68146b14e890ab9c22621c5b35bd709fa70d772b86117f8a3ae955b
+- Worker accept: https://atlantic.pharosscan.xyz/tx/0x627d43b98343d09408c3386ed51ab62b55dd2326582f76d9cdf20b8641548112
+- Submit proof: https://atlantic.pharosscan.xyz/tx/0x0b67b725160e39595b9b40cdf7ecb4bdbaa85ba05b3582638806f4d39d62946a
+- Verifier release: https://atlantic.pharosscan.xyz/tx/0xb670740ad2f183cd62908ee8ef8173168f42c8d67774bfa11d3c997b38c2540e
+
+60-second narrative:
+
+`pharos-agent-escrow` is a reusable on-chain work-order primitive for AI agents. A planner agent escrows PHRS, PROS, or ERC20 funds on Pharos with task metadata and acceptance criteria. A worker agent discovers or accepts the job, completes it, and submits content-addressed proof. A buyer or verifier agent checks the proof against the task policy, then releases payment only when the result passes. Every action emits events, so reputation and marketplace agents can rank workers, recommend jobs, and compose the skill into Phase 2 autonomous agent workflows.
+
+## Additional Judge Commands
 
 Run the recommended USDC work-order lifecycle:
 
