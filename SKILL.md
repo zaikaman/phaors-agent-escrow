@@ -75,9 +75,21 @@ npx tsx scripts/accept-submit-release.ts submit --escrow <address> --id 1 --proo
 npx tsx scripts/accept-submit-release.ts release --escrow <address> --id 1
 npx tsx scripts/status.ts --escrow <address> --id 1
 npx tsx scripts/demo-flow.ts --escrow <address> --amount 0.001
+npx tsx scripts/judge-demo.ts --escrow <address> --amount 0.001
 npx tsx scripts/events.ts --escrow <address>
 npx tsx scripts/reputation.ts --escrow <address> --agent <agentAddress> --asset native
 ```
+
+## Judge Demo
+
+Use `scripts/judge-demo.ts` for the full Phase 1 walkthrough. It uses three funded wallets and real Groq LLM calls:
+
+- `PHAROS_PRIVATE_KEY`: Planner Agent, creates and funds the work order.
+- `PHAROS_PRIVATE_KEY_2`: Worker Agent, accepts and submits proof.
+- `PHAROS_PRIVATE_KEY_3`: Verifier Agent, checks proof and releases payment.
+- `GROQ_API_KEY`: Groq Responses API key.
+
+The Reputation Agent is read-only. It summarizes the worker with contract reads after release.
 
 ## Agent Guidance
 

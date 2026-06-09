@@ -11,6 +11,7 @@
     "work": "tsx scripts/accept-submit-release.ts",
     "status": "tsx scripts/status.ts",
     "demo": "tsx scripts/demo-flow.ts",
+    "judge-demo": "tsx scripts/judge-demo.ts",
     "events": "tsx scripts/events.ts",
     "reputation": "tsx scripts/reputation.ts"
   },

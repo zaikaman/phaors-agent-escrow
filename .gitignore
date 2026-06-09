@@ -4,3 +4,9 @@ cache/
 .env
 .private_key
 broadcast/
+demo-artifacts/
+AGENTS.md 
+hackathon.md  
+idea.md 
+examples
+pharos-skill-engine

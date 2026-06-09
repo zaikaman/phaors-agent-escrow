@@ -283,6 +283,27 @@ export function makeClients(args: Record<string, string | boolean>) {
   return { account, chain, network, publicClient, walletClient };
 }
 
+export function makeClientsFromPrivateKey(args: Record<string, string | boolean>, privateKeyEnvName: string) {
+  const network = getNetwork(args);
+  const chain = {
+    id: network.chainId,
+    name: network.name,
+    nativeCurrency: { name: network.nativeToken, symbol: network.nativeToken, decimals: 18 },
+    rpcUrls: { default: { http: [network.rpcUrl] } },
+  };
+  const publicClient = createPublicClient({ chain, transport: http(network.rpcUrl) });
+
+  const rawPrivateKey = process.env[privateKeyEnvName];
+  const privateKey = rawPrivateKey?.startsWith("0x") ? rawPrivateKey : `0x${rawPrivateKey || ""}`;
+  if (!/^0x[0-9a-fA-F]{64}$/.test(privateKey)) {
+    throw new Error(`Set ${privateKeyEnvName} to a 32-byte hex private key. Do not hardcode it in scripts.`);
+  }
+
+  const account = privateKeyToAccount(privateKey as `0x${string}`);
+  const walletClient = createWalletClient({ account, chain, transport: http(network.rpcUrl) });
+  return { account, chain, network, publicClient, walletClient };
+}
+
 export function makeReadClient(args: Record<string, string | boolean>) {
   const network = getNetwork(args);
   const chain = {

@@ -60,6 +60,19 @@ Run a one-wallet lifecycle demo:
 npx tsx scripts/demo-flow.ts --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --amount 0.001
 ```
 
+Run the judge-grade three-agent Groq demo:
+
+```powershell
+npm run judge-demo -- --network atlantic-testnet --escrow 0x6f88b3c79325472f6439426e84c9303506661585 --amount 0.001
+```
+
+Required environment variables:
+
+- `PHAROS_PRIVATE_KEY`: Planner Agent wallet
+- `PHAROS_PRIVATE_KEY_2`: Worker Agent wallet
+- `PHAROS_PRIVATE_KEY_3`: Verifier Agent wallet
+- `GROQ_API_KEY`: Groq API key
+
 Inspect events and reputation:
 
 ```powershell
