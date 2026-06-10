@@ -112,6 +112,8 @@ Use this when the user wants to discover, accept, complete, or submit work.
 ```bash
 npm run find-open-work -- --network atlantic-testnet --escrow <escrow> --worker <workerAddress> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --min-amount 1
 npm run rank-open-work -- --network atlantic-testnet --escrow <escrow> --worker <workerAddress> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --min-amount 1 --limit 10
+npm run find-open-work -- --network atlantic-testnet --escrow <escrow> --worker <workerAddress> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --all --deployment-tx 0x37bb393e45c6df5d6da4eef5a858cc289900cc05f5e3d7090839b8ccf9a9135d
+npm run rank-open-work -- --network atlantic-testnet --escrow <escrow> --worker <workerAddress> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --all --deployment-tx 0x37bb393e45c6df5d6da4eef5a858cc289900cc05f5e3d7090839b8ccf9a9135d --limit 10
 npm run work -- accept --network atlantic-testnet --escrow <escrow> --id <workOrderId> --signer-env PHAROS_PRIVATE_KEY_2
 npm run validate-metadata -- --kind proof --file <proof.json>
 npm run write-hash-artifact -- --kind proof --input <proof.json> --out-dir demo-artifacts/hash-artifacts --name proof
@@ -177,7 +179,7 @@ The Reputation Agent is read-only. It summarizes the worker with contract reads 
 
 Use `scripts/find-open-work.ts` when a worker agent needs to discover claimable jobs. It scans `WorkOrderCreated` events, confirms each candidate is still `Open`, filters by asset, minimum reward, work deadline, and worker eligibility, then prints claimable jobs with explorer links and accept commands.
 
-Use `--worker <address>` to show only open jobs or jobs designated for that worker. Use `--asset native`, `--asset <erc20Address>`, or omit it for all assets. Use `--all` to scan from deployment, or `--from-block <block>` for a known window.
+Use `--worker <address>` to show only open jobs or jobs designated for that worker. Use `--asset native`, `--asset <erc20Address>`, or omit it for all assets. Omit `--all` for the default recent scan. For a full deployment scan, use `--all --deployment-tx 0x37bb393e45c6df5d6da4eef5a858cc289900cc05f5e3d7090839b8ccf9a9135d` or `--all --from-block <block>`; `--all` is intentionally rejected without one of those anchors.
 
 Use `scripts/rank-open-work.ts` when a worker or marketplace agent needs prioritized jobs instead of a plain claimable list. It scores open work by reward, deadline urgency, verifier presence, metadata evidence, and worker eligibility.
 

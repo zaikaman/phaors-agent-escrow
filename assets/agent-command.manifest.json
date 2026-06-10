@@ -75,11 +75,19 @@
       "role": "worker-agent",
       "description": "Scan WorkOrderCreated events, filter claimable open jobs, and print accept commands.",
       "command": "npm run find-open-work -- --network ${network} --escrow ${escrow} --worker ${worker} --asset ${asset} --min-amount ${minAmount}",
+      "optionalFlags": [
+        { "name": "all", "flag": "--all", "requiresAny": ["deploymentTx", "fromBlock"], "description": "Scan full history only when paired with a deployment transaction or explicit from block." },
+        { "name": "deploymentTx", "flag": "--deployment-tx ${deploymentTx}", "description": "Deployment transaction used to derive the starting block for --all scans." },
+        { "name": "fromBlock", "flag": "--from-block ${fromBlock}", "description": "Explicit starting block for --all scans or bounded event queries." }
+      ],
       "params": [
         { "name": "escrow", "type": "address", "required": true },
         { "name": "worker", "type": "address", "required": false },
         { "name": "asset", "type": "string", "required": false },
-        { "name": "minAmount", "type": "decimal-string", "required": false }
+        { "name": "minAmount", "type": "decimal-string", "required": false },
+        { "name": "all", "type": "boolean", "required": false, "requiresAny": ["deploymentTx", "fromBlock"] },
+        { "name": "deploymentTx", "type": "hash", "required": false, "default": "0x37bb393e45c6df5d6da4eef5a858cc289900cc05f5e3d7090839b8ccf9a9135d" },
+        { "name": "fromBlock", "type": "uint64", "required": false }
       ]
     },
     {
@@ -87,12 +95,20 @@
       "role": "worker-agent",
       "description": "Return prioritized open work using reward, urgency, verifier, metadata evidence, and worker eligibility signals.",
       "command": "npm run rank-open-work -- --network ${network} --escrow ${escrow} --worker ${worker} --asset ${asset} --min-amount ${minAmount} --limit ${limit}",
+      "optionalFlags": [
+        { "name": "all", "flag": "--all", "requiresAny": ["deploymentTx", "fromBlock"], "description": "Scan full history only when paired with a deployment transaction or explicit from block." },
+        { "name": "deploymentTx", "flag": "--deployment-tx ${deploymentTx}", "description": "Deployment transaction used to derive the starting block for --all scans." },
+        { "name": "fromBlock", "flag": "--from-block ${fromBlock}", "description": "Explicit starting block for --all scans or bounded event queries." }
+      ],
       "params": [
         { "name": "escrow", "type": "address", "required": true },
         { "name": "worker", "type": "address", "required": false },
         { "name": "asset", "type": "string", "required": false },
         { "name": "minAmount", "type": "decimal-string", "required": false },
-        { "name": "limit", "type": "number", "required": false, "default": 10 }
+        { "name": "limit", "type": "number", "required": false, "default": 10 },
+        { "name": "all", "type": "boolean", "required": false, "requiresAny": ["deploymentTx", "fromBlock"] },
+        { "name": "deploymentTx", "type": "hash", "required": false, "default": "0x37bb393e45c6df5d6da4eef5a858cc289900cc05f5e3d7090839b8ccf9a9135d" },
+        { "name": "fromBlock", "type": "uint64", "required": false }
       ]
     },
     {

@@ -45,11 +45,15 @@ npm run create -- --network atlantic-testnet --escrow <escrow> --asset 0xcfc8330
 ```powershell
 npm run find-open-work -- --network atlantic-testnet --escrow <escrow> --worker <workerAddress> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --min-amount 1
 npm run rank-open-work -- --network atlantic-testnet --escrow <escrow> --worker <workerAddress> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --min-amount 1 --limit 10
+npm run find-open-work -- --network atlantic-testnet --escrow <escrow> --worker <workerAddress> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --all --deployment-tx 0x37bb393e45c6df5d6da4eef5a858cc289900cc05f5e3d7090839b8ccf9a9135d
+npm run rank-open-work -- --network atlantic-testnet --escrow <escrow> --worker <workerAddress> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --all --deployment-tx 0x37bb393e45c6df5d6da4eef5a858cc289900cc05f5e3d7090839b8ccf9a9135d --limit 10
 npm run work -- accept --network atlantic-testnet --escrow <escrow> --id <workOrderId> --signer-env PHAROS_PRIVATE_KEY_2
 npm run validate-metadata -- --kind proof --file .\proof.json
 npm run write-hash-artifact -- --kind proof --input .\proof.json --out-dir demo-artifacts/hash-artifacts --name proof
 npm run work -- submit --network atlantic-testnet --escrow <escrow> --id <workOrderId> --proof <proofURI> --signer-env PHAROS_PRIVATE_KEY_2
 ```
+
+Omit `--all` for the default recent scan. Use `--all` only with `--deployment-tx <txHash>` or `--from-block <block>` so the scan has an explicit chain-history anchor.
 
 ### Verifier: Validate And Release
 
@@ -107,7 +111,9 @@ function acceptWorkOrder(uint256 id) external
 
 ```powershell
 npx tsx scripts/find-open-work.ts --network atlantic-testnet --escrow <address> --worker <workerAddress> --asset native --min-amount 0.001
+npx tsx scripts/find-open-work.ts --network atlantic-testnet --escrow <address> --worker <workerAddress> --asset native --all --deployment-tx 0x37bb393e45c6df5d6da4eef5a858cc289900cc05f5e3d7090839b8ccf9a9135d
 npm run rank-open-work -- --network atlantic-testnet --escrow <address> --worker <workerAddress> --asset native --min-amount 0.001 --limit 10
+npm run rank-open-work -- --network atlantic-testnet --escrow <address> --worker <workerAddress> --asset native --all --deployment-tx 0x37bb393e45c6df5d6da4eef5a858cc289900cc05f5e3d7090839b8ccf9a9135d --limit 10
 ```
 
 ### submitProof
