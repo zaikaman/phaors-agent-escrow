@@ -49,7 +49,7 @@ Use these prompts in three fresh agent sessions to test the real reusable skill 
 ### 1. Planner Agent
 
 ```text
-Use the local $pharos-agent-escrow skill in D:\pharos-hackathon\pharos-agent-escrow as a Planner Agent.
+Use the local $pharos-agent-escrow skill as a Planner Agent.
 
 Create a real 1 USDC Atlantic testnet work order for the configured worker and verifier.
 
@@ -63,7 +63,7 @@ Do not run demo scripts. Use the skill's production workflow and return the work
 Replace `<WORK_ORDER_ID>` with the planner-created ID.
 
 ```text
-Use the local $pharos-agent-escrow skill in D:\pharos-hackathon\pharos-agent-escrow as a Worker Agent.
+Use the local $pharos-agent-escrow skill as a Worker Agent.
 
 Find and complete work order <WORK_ORDER_ID>.
 
@@ -77,7 +77,7 @@ Do not run demo scripts. Use the skill's production workflow.
 Replace `<WORK_ORDER_ID>` with the same ID, and include the worker proof path or URI when available.
 
 ```text
-Use the local $pharos-agent-escrow skill in D:\pharos-hackathon\pharos-agent-escrow as a Verifier Agent.
+Use the local $pharos-agent-escrow skill as a Verifier Agent.
 
 Verify work order <WORK_ORDER_ID> and release payment only if the submitted proof satisfies the task metadata.
 
