@@ -11,7 +11,16 @@
     "network": "atlantic-testnet",
     "escrow": "0x047119bdf422fc82021b88cf679ddeddd500f128",
     "nativeAsset": "native",
-    "usdcAsset": "0xcfc8330f4bcab529c625d12781b1c19466a9fc8b"
+    "usdcAsset": "0xcfc8330f4bcab529c625d12781b1c19466a9fc8b",
+    "amount": "1",
+    "workDeadlineMinutes": 120,
+    "reviewPeriodMinutes": 60,
+    "planner": "0x09fb7e49a05450ADfeF435cff87f0332BB04b560",
+    "worker": "0x327e766EB317e5A3FA6dB30c0A5b9735Ad1aEdae",
+    "verifier": "0x209e9ccC5962E46CCeBA63c0b2D3184875faf948",
+    "plannerSignerEnv": "PHAROS_PRIVATE_KEY",
+    "workerSignerEnv": "PHAROS_PRIVATE_KEY_2",
+    "verifierSignerEnv": "PHAROS_PRIVATE_KEY_3"
   },
   "selectionPolicy": {
     "defaultBehavior": "Choose the smallest role-specific method that satisfies the user's request.",
@@ -58,16 +67,17 @@
       "method": "pharos.createWorkOrder",
       "role": "planner-agent",
       "description": "Create and fund a native or ERC20 work order with metadata, worker, verifier, work deadline, and review deadline.",
-      "command": "npm run create -- --network ${network} --escrow ${escrow} --asset ${asset} --amount ${amount} --work-deadline-minutes ${workDeadlineMinutes} --review-period-minutes ${reviewPeriodMinutes} --metadata ${metadataURI}",
+      "command": "npm run create -- --network ${network} --escrow ${escrow} --asset ${asset} --amount ${amount} --work-deadline-minutes ${workDeadlineMinutes} --review-period-minutes ${reviewPeriodMinutes} --metadata ${metadataURI} --metadata-file ${metadataFile} --worker ${worker} --verifier ${verifier}",
       "params": [
-        { "name": "escrow", "type": "address", "required": true },
-        { "name": "asset", "type": "string", "required": true },
-        { "name": "amount", "type": "decimal-string", "required": true },
+        { "name": "escrow", "type": "address", "required": false, "default": "0x047119bdf422fc82021b88cf679ddeddd500f128" },
+        { "name": "asset", "type": "string", "required": false, "default": "0xcfc8330f4bcab529c625d12781b1c19466a9fc8b" },
+        { "name": "amount", "type": "decimal-string", "required": false, "default": "1" },
         { "name": "metadataURI", "type": "uri", "required": true },
-        { "name": "workDeadlineMinutes", "type": "number", "required": false, "default": 60 },
+        { "name": "metadataFile", "type": "path", "required": true },
+        { "name": "workDeadlineMinutes", "type": "number", "required": false, "default": 120 },
         { "name": "reviewPeriodMinutes", "type": "number", "required": false, "default": 60 },
-        { "name": "worker", "type": "address", "required": false },
-        { "name": "verifier", "type": "address", "required": false }
+        { "name": "worker", "type": "address", "required": false, "default": "0x327e766EB317e5A3FA6dB30c0A5b9735Ad1aEdae" },
+        { "name": "verifier", "type": "address", "required": false, "default": "0x209e9ccC5962E46CCeBA63c0b2D3184875faf948" }
       ]
     },
     {
@@ -81,10 +91,10 @@
         { "name": "fromBlock", "flag": "--from-block ${fromBlock}", "description": "Explicit starting block for --all scans or bounded event queries." }
       ],
       "params": [
-        { "name": "escrow", "type": "address", "required": true },
-        { "name": "worker", "type": "address", "required": false },
-        { "name": "asset", "type": "string", "required": false },
-        { "name": "minAmount", "type": "decimal-string", "required": false },
+        { "name": "escrow", "type": "address", "required": false, "default": "0x047119bdf422fc82021b88cf679ddeddd500f128" },
+        { "name": "worker", "type": "address", "required": false, "default": "0x327e766EB317e5A3FA6dB30c0A5b9735Ad1aEdae" },
+        { "name": "asset", "type": "string", "required": false, "default": "0xcfc8330f4bcab529c625d12781b1c19466a9fc8b" },
+        { "name": "minAmount", "type": "decimal-string", "required": false, "default": "1" },
         { "name": "all", "type": "boolean", "required": false, "requiresAny": ["deploymentTx", "fromBlock"] },
         { "name": "deploymentTx", "type": "hash", "required": false, "default": "0x37bb393e45c6df5d6da4eef5a858cc289900cc05f5e3d7090839b8ccf9a9135d" },
         { "name": "fromBlock", "type": "uint64", "required": false }
@@ -101,10 +111,10 @@
         { "name": "fromBlock", "flag": "--from-block ${fromBlock}", "description": "Explicit starting block for --all scans or bounded event queries." }
       ],
       "params": [
-        { "name": "escrow", "type": "address", "required": true },
-        { "name": "worker", "type": "address", "required": false },
-        { "name": "asset", "type": "string", "required": false },
-        { "name": "minAmount", "type": "decimal-string", "required": false },
+        { "name": "escrow", "type": "address", "required": false, "default": "0x047119bdf422fc82021b88cf679ddeddd500f128" },
+        { "name": "worker", "type": "address", "required": false, "default": "0x327e766EB317e5A3FA6dB30c0A5b9735Ad1aEdae" },
+        { "name": "asset", "type": "string", "required": false, "default": "0xcfc8330f4bcab529c625d12781b1c19466a9fc8b" },
+        { "name": "minAmount", "type": "decimal-string", "required": false, "default": "1" },
         { "name": "limit", "type": "number", "required": false, "default": 10 },
         { "name": "all", "type": "boolean", "required": false, "requiresAny": ["deploymentTx", "fromBlock"] },
         { "name": "deploymentTx", "type": "hash", "required": false, "default": "0x37bb393e45c6df5d6da4eef5a858cc289900cc05f5e3d7090839b8ccf9a9135d" },
@@ -115,33 +125,36 @@
       "method": "pharos.acceptWorkOrder",
       "role": "worker-agent",
       "description": "Accept an open or designated work order.",
-      "command": "npm run work -- accept --network ${network} --escrow ${escrow} --id ${id}",
+      "command": "npm run work -- accept --network ${network} --escrow ${escrow} --id ${id} --signer-env ${signerEnv}",
       "params": [
-        { "name": "escrow", "type": "address", "required": true },
-        { "name": "id", "type": "uint256", "required": true }
+        { "name": "escrow", "type": "address", "required": false, "default": "0x047119bdf422fc82021b88cf679ddeddd500f128" },
+        { "name": "id", "type": "uint256", "required": true },
+        { "name": "signerEnv", "type": "env-name", "required": false, "default": "PHAROS_PRIVATE_KEY_2" }
       ]
     },
     {
       "method": "pharos.submitProof",
       "role": "worker-agent",
       "description": "Submit a proof URI for an accepted work order.",
-      "command": "npm run work -- submit --network ${network} --escrow ${escrow} --id ${id} --proof ${proofURI}",
+      "command": "npm run work -- submit --network ${network} --escrow ${escrow} --id ${id} --proof ${proofURI} --signer-env ${signerEnv}",
       "params": [
-        { "name": "escrow", "type": "address", "required": true },
+        { "name": "escrow", "type": "address", "required": false, "default": "0x047119bdf422fc82021b88cf679ddeddd500f128" },
         { "name": "id", "type": "uint256", "required": true },
-        { "name": "proofURI", "type": "uri", "required": true }
+        { "name": "proofURI", "type": "uri", "required": true },
+        { "name": "signerEnv", "type": "env-name", "required": false, "default": "PHAROS_PRIVATE_KEY_2" }
       ]
     },
     {
       "method": "pharos.verifyAndRelease",
       "role": "verifier-agent",
       "description": "Load task/proof metadata, validate schemas and policy, then release payment only if verification passes.",
-      "command": "npm run verify-and-release -- --network ${network} --escrow ${escrow} --id ${id} --policy ${policy}",
+      "command": "npm run verify-and-release -- --network ${network} --escrow ${escrow} --id ${id} --policy ${policy} --release-env ${releaseEnv}",
       "params": [
-        { "name": "escrow", "type": "address", "required": true },
+        { "name": "escrow", "type": "address", "required": false, "default": "0x047119bdf422fc82021b88cf679ddeddd500f128" },
         { "name": "id", "type": "uint256", "required": true },
         { "name": "policy", "type": "enum", "required": false, "default": "deterministic", "values": ["deterministic", "groq", "both"] },
-        { "name": "dryRun", "type": "boolean", "required": false, "flag": "--dry-run" }
+        { "name": "dryRun", "type": "boolean", "required": false, "flag": "--dry-run" },
+        { "name": "releaseEnv", "type": "env-name", "required": false, "default": "PHAROS_PRIVATE_KEY_3" }
       ]
     },
     {

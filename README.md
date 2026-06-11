@@ -44,39 +44,18 @@ Use `judge-demo-usdc` only for judge walkthroughs, live demos, or submission pro
 
 ## Production Testnet Forward Test
 
-Use these prompts in three fresh agent sessions to test the real reusable skill path on Pharos Atlantic. This is the production-style flow, not the canned judge demo.
+Use these prompts in three fresh agent sessions to test the real reusable skill path on Pharos Atlantic. The prompts are intentionally short: the skill should supply the configured testnet agents, network defaults, escrow address, USDC address, metadata validation, `doctor` preflights, signer selection, proof hashing, and release policy.
 
 ### 1. Planner Agent
 
 ```text
 Use the local $pharos-agent-escrow skill in D:\pharos-hackathon\pharos-agent-escrow as a Planner Agent.
 
-Create a real on-chain Atlantic USDC work order on the deployed escrow.
+Create a real 1 USDC Atlantic testnet work order for the configured worker and verifier.
 
-Task:
-Produce a concise markdown brief explaining how pharos-agent-escrow enables AI agents to coordinate paid work on-chain. The brief must include:
-- the planner, worker, verifier, reputation, and marketplace roles
-- why escrow is better than a direct transfer for agent work
-- at least 3 concrete future agent use cases
+The task is to produce a concise markdown brief explaining how pharos-agent-escrow lets AI agents coordinate paid work on-chain.
 
-Constraints:
-- Use Pharos Atlantic testnet.
-- Escrow: 0x047119bdf422fc82021b88cf679ddeddd500f128
-- Asset: USDC at 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b
-- Amount: 1 USDC
-- Worker: 0x327e766EB317e5A3FA6dB30c0A5b9735Ad1aEdae
-- Verifier: 0x209e9ccC5962E46CCeBA63c0b2D3184875faf948
-- Work deadline: 120 minutes
-- Review period: 60 minutes
-
-Required behavior:
-- Do not run judge-demo-usdc, judge-demo, marketplace-demo, or demo.
-- Build valid task metadata.
-- Validate the metadata.
-- Write a content-addressed sha256 task artifact.
-- Run doctor before sending transactions.
-- Then run the real create command to approve USDC and create the funded work order.
-- Return the work order ID, metadata URI, metadata file path, transaction links, planner address, worker address, verifier address, escrow, asset, amount, and exact next prompt for the Worker Agent.
+Do not run demo scripts. Use the skill's production workflow and return the work order ID plus the next prompt for the Worker Agent.
 ```
 
 ### 2. Worker Agent
@@ -86,26 +65,11 @@ Replace `<WORK_ORDER_ID>` with the planner-created ID.
 ```text
 Use the local $pharos-agent-escrow skill in D:\pharos-hackathon\pharos-agent-escrow as a Worker Agent.
 
-Find, accept, complete, and submit proof for the Atlantic USDC work order created by the planner.
+Find and complete work order <WORK_ORDER_ID>.
 
-Target:
-- Network: Pharos Atlantic testnet
-- Escrow: 0x047119bdf422fc82021b88cf679ddeddd500f128
-- Asset: USDC at 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b
-- Worker address: 0x327e766EB317e5A3FA6dB30c0A5b9735Ad1aEdae
-- Work order ID: <WORK_ORDER_ID>
+Accept it if it is claimable by the configured worker, write the requested markdown brief, submit proof on-chain, and return the proof URI plus the next prompt for the Verifier Agent.
 
-Required behavior:
-- Do not run judge-demo-usdc, judge-demo, marketplace-demo, or demo.
-- First run read-only discovery/ranking to confirm this work order is claimable by the worker.
-- Run doctor before sending transactions.
-- If the work order is claimable, accept it using the worker signer.
-- Produce the requested markdown brief as the actual work product.
-- Build valid proof metadata that includes the result summary, artifact path or content hash, acceptance-criteria mapping, and verification notes.
-- Validate the proof metadata.
-- Write a content-addressed sha256 proof artifact.
-- Submit the proof URI on-chain using the worker signer.
-- Return the accept transaction, proof transaction, proof URI, proof file path, completed markdown artifact path, and exact next prompt for the Verifier Agent.
+Do not run demo scripts. Use the skill's production workflow.
 ```
 
 ### 3. Verifier Agent
@@ -115,25 +79,12 @@ Replace `<WORK_ORDER_ID>` with the same ID, and include the worker proof path or
 ```text
 Use the local $pharos-agent-escrow skill in D:\pharos-hackathon\pharos-agent-escrow as a Verifier Agent.
 
-Verify the submitted proof for this Atlantic USDC work order and release payment only if the proof satisfies the task metadata.
+Verify work order <WORK_ORDER_ID> and release payment only if the submitted proof satisfies the task metadata.
 
-Target:
-- Network: Pharos Atlantic testnet
-- Escrow: 0x047119bdf422fc82021b88cf679ddeddd500f128
-- Asset: USDC at 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b
-- Work order ID: <WORK_ORDER_ID>
-
-Required behavior:
-- Do not run judge-demo-usdc, judge-demo, marketplace-demo, or demo.
-- Read the on-chain work order status first.
-- Load the task metadata and submitted proof metadata.
-- Run verifier policy in dry-run mode first.
-- Check the proof against every acceptance criterion.
-- Run doctor before sending the release transaction.
-- If and only if verification passes, release payment using the verifier signer.
-- After release, read final status and worker reputation.
-- Return verifier decision, rationale, release transaction link, final status, worker reputation delta if available, and all relevant explorer links.
+Do not run demo scripts. Use the skill's production verifier workflow and return the decision, release transaction, final status, and worker reputation change.
 ```
+
+Expected behavior for all three prompts: agents should avoid `judge-demo-usdc`, `judge-demo`, `marketplace-demo`, and `demo`; run role-specific commands; run `doctor` before live writes; validate metadata/proof schemas; use content-addressed `sha256:` artifacts; and return explorer links for on-chain transactions.
 
 Live Pharos Atlantic proof:
 

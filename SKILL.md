@@ -69,6 +69,18 @@ Default to Atlantic testnet unless the user explicitly asks for mainnet.
 - Atlantic USDC: `0xcfc8330f4bcab529c625d12781b1c19466a9fc8b`
 - Native token: `PHRS` on Atlantic testnet, `PROS` on mainnet
 
+## Configured Testnet Agents
+
+Use these Atlantic testnet identities when a prompt says "configured planner", "configured worker", or "configured verifier" and the user does not provide different addresses. These are public addresses only; never print private keys.
+
+| Role | Address | Signing env |
+| --- | --- | --- |
+| Planner Agent | `0x09fb7e49a05450ADfeF435cff87f0332BB04b560` | `PHAROS_PRIVATE_KEY` |
+| Worker Agent | `0x327e766EB317e5A3FA6dB30c0A5b9735Ad1aEdae` | `PHAROS_PRIVATE_KEY_2` |
+| Verifier Agent | `0x209e9ccC5962E46CCeBA63c0b2D3184875faf948` | `PHAROS_PRIVATE_KEY_3` |
+
+For short production-test prompts, default to `1` Atlantic USDC, the current split-deadline escrow, the configured worker, the configured verifier, a `120` minute work deadline, and a `60` minute review period unless the user specifies otherwise.
+
 ## Atlantic Deployment
 
 - Current split-deadline `AgentWorkOrderEscrow`: `0x047119bdf422fc82021b88cf679ddeddd500f128`
@@ -100,7 +112,7 @@ Use this when the user wants to create, price, route, or fund a task.
 npm run doctor -- --network atlantic-testnet --escrow <escrow>
 npm run validate-metadata -- --kind task --file <task.json>
 npm run write-hash-artifact -- --kind task --input <task.json> --out-dir demo-artifacts/hash-artifacts --name task
-npm run create -- --network atlantic-testnet --escrow <escrow> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --amount 1 --work-deadline-minutes 60 --review-period-minutes 60 --metadata <metadataURI> --metadata-file <task.json> --worker <workerAddress> --verifier <verifierAddress>
+npm run create -- --network atlantic-testnet --escrow <escrow> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --amount 1 --work-deadline-minutes 120 --review-period-minutes 60 --metadata <metadataURI> --metadata-file <task.json> --worker 0x327e766EB317e5A3FA6dB30c0A5b9735Ad1aEdae --verifier 0x209e9ccC5962E46CCeBA63c0b2D3184875faf948
 ```
 
 Use `npm run recommend-worker` before create when the user provides candidate workers and wants routing help.
@@ -110,10 +122,10 @@ Use `npm run recommend-worker` before create when the user provides candidate wo
 Use this when the user wants to discover, accept, complete, or submit work.
 
 ```bash
-npm run find-open-work -- --network atlantic-testnet --escrow <escrow> --worker <workerAddress> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --min-amount 1
-npm run rank-open-work -- --network atlantic-testnet --escrow <escrow> --worker <workerAddress> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --min-amount 1 --limit 10
-npm run find-open-work -- --network atlantic-testnet --escrow <escrow> --worker <workerAddress> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --all --deployment-tx 0x37bb393e45c6df5d6da4eef5a858cc289900cc05f5e3d7090839b8ccf9a9135d
-npm run rank-open-work -- --network atlantic-testnet --escrow <escrow> --worker <workerAddress> --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --all --deployment-tx 0x37bb393e45c6df5d6da4eef5a858cc289900cc05f5e3d7090839b8ccf9a9135d --limit 10
+npm run find-open-work -- --network atlantic-testnet --escrow <escrow> --worker 0x327e766EB317e5A3FA6dB30c0A5b9735Ad1aEdae --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --min-amount 1
+npm run rank-open-work -- --network atlantic-testnet --escrow <escrow> --worker 0x327e766EB317e5A3FA6dB30c0A5b9735Ad1aEdae --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --min-amount 1 --limit 10
+npm run find-open-work -- --network atlantic-testnet --escrow <escrow> --worker 0x327e766EB317e5A3FA6dB30c0A5b9735Ad1aEdae --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --all --deployment-tx 0x37bb393e45c6df5d6da4eef5a858cc289900cc05f5e3d7090839b8ccf9a9135d
+npm run rank-open-work -- --network atlantic-testnet --escrow <escrow> --worker 0x327e766EB317e5A3FA6dB30c0A5b9735Ad1aEdae --asset 0xcfc8330f4bcab529c625d12781b1c19466a9fc8b --all --deployment-tx 0x37bb393e45c6df5d6da4eef5a858cc289900cc05f5e3d7090839b8ccf9a9135d --limit 10
 npm run work -- accept --network atlantic-testnet --escrow <escrow> --id <workOrderId> --signer-env PHAROS_PRIVATE_KEY_2
 npm run validate-metadata -- --kind proof --file <proof.json>
 npm run write-hash-artifact -- --kind proof --input <proof.json> --out-dir demo-artifacts/hash-artifacts --name proof
